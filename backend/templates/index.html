@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Attendance OCR - Printcare</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1470&q=80') no-repeat center center fixed;
+      background-size: cover;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 50, 0.6);
+      z-index: -1;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-white font-sans">
+
+  <h1 class="text-6xl font-extrabold mb-12 text-center drop-shadow-lg">
+    Welcome to <span class="text-yellow-400">Printcare</span>
+  </h1>
+
+  <div class="bg-white bg-opacity-95 text-gray-900 rounded-3xl shadow-2xl p-10 max-w-3xl w-full">
+    <h2 class="text-4xl font-bold mb-8 text-center text-blue-900">
+      Scan Your ID
+    </h2>
+
+    <div class="flex justify-center gap-8 mb-6">
+      <button id="btnIn" class="px-10 py-4 bg-green-600 hover:bg-green-700 rounded-lg text-white font-bold text-xl">
+        IN
+      </button>
+      <button id="btnOut" class="px-10 py-4 bg-red-600 hover:bg-red-700 rounded-lg text-white font-bold text-xl">
+        OUT
+      </button>
+    </div>
+
+    <div id="cameraContainer" class="flex flex-col items-center space-y-4 hidden">
+      <video id="video" autoplay playsinline class="rounded-lg shadow w-full max-w-md"></video>
+      <p class="text-sm text-gray-600">Hold your ID card steady in front of the camera</p>
+    </div>
+
+    <div id="message" class="mt-8 text-center text-lg font-semibold min-h-[3rem]"></div>
+  </div>
+
+  <script>
+    const btnIn = document.getElementById('btnIn');
+    const btnOut = document.getElementById('btnOut');
+    const video = document.getElementById('video');
+    const cameraContainer = document.getElementById('cameraContainer');
+    const messageDiv = document.getElementById('message');
+
+    let stream = null;
+    let intervalId = null;
+    let currentAction = null;
+    let scanning = false;
+
+    async function startCamera(action) {
+      currentAction = action;
+      cameraContainer.classList.remove('hidden');
+      messageDiv.textContent = 'Starting camera...';
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+        scanning = true;
+        messageDiv.textContent = 'Scanning for ID...';
+
+        // Auto scan every 1.5 seconds
+        intervalId = setInterval(captureAndSendFrame, 1500);
+
+      } catch (error) {
+        messageDiv.textContent = 'Camera access denied: ' + error.message;
+        messageDiv.classList.add('text-red-700');
+      }
+    }
+
+    async function captureAndSendFrame() {
+      if (!video.videoWidth || !scanning) return;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append('id_card', blob, 'frame.jpg');
+        formData.append('action', currentAction);
+
+        try {
+          const res = await fetch('/upload', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            stopCamera();
+            messageDiv.textContent = data.message || (currentAction.toUpperCase() + ' recorded successfully!');
+            messageDiv.classList.add('text-green-700');
+          } else {
+            console.log('Not detected:', data.message);
+          }
+        } catch (err) {
+          console.error(err);
+          messageDiv.textContent = 'Error connecting to server.';
+          messageDiv.classList.add('text-red-700');
+          stopCamera();
+        }
+      }, 'image/jpeg', 0.9);
+    }
+
+    function stopCamera() {
+      scanning = false;
+      if (intervalId) clearInterval(intervalId);
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      video.srcObject = null;
+      cameraContainer.classList.add('hidden');
+    }
+
+    btnIn.addEventListener('click', () => startCamera('in'));
+    btnOut.addEventListener('click', () => startCamera('out'));
+  </script>
+
+</body>
+</html>
