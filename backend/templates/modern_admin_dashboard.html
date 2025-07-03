@@ -1,0 +1,2069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Printcare Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Theme Variables */
+        :root {
+            --bg-primary: #f9fafb;
+            --bg-secondary: #ffffff;
+            --bg-sidebar: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            --table-even: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            --table-odd: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
+            --table-hover: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            --input-bg: #ffffff;
+            --input-border: #d1d5db;
+        }
+        
+        [data-theme="dark"] {
+            --bg-primary: #111827;
+            --bg-secondary: #1f2937;
+            --bg-sidebar: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --border-color: #374151;
+            --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+            --table-even: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            --table-odd: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+            --table-hover: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --input-bg: #374151;
+            --input-border: #4b5563;
+        }
+        
+        /* Light mode text styling - Black text for proper contrast */
+        .table-cell,
+        .table-cell-bold {
+            color: #1f2937 !important;
+            font-weight: 600 !important;
+        }
+        
+        .theme-text {
+            color: #1f2937 !important;
+        }
+        
+        .theme-text-secondary {
+            color: #6b7280 !important;
+        }
+        
+        /* Special styling for NIC numbers in light mode */
+        .nic-cell {
+            color: #1f2937 !important;
+            font-weight: 800 !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1)) !important;
+            border-radius: 6px !important;
+            padding: 4px 8px !important;
+            border: 1px solid rgba(59, 130, 246, 0.2) !important;
+        }
+        
+        /* Light mode text for all elements */
+        td, th, span, p, h1, h2, h3, h4 {
+            color: #1f2937 !important;
+        }
+        
+        .text-sm {
+            color: #1f2937 !important;
+        }
+        
+        /* Ensure buttons and links have proper colors in light mode */
+        .sidebar-link {
+            color: #ffffff !important;
+        }
+        
+        .sidebar-link:hover {
+            color: #ffffff !important;
+        }
+        
+        /* Active sidebar link styling */
+        .sidebar-link.active {
+            background: rgba(255, 255, 255, 0.15) !important;
+            color: #ffffff !important;
+            border-left: 4px solid #3b82f6 !important;
+        }
+        
+        /* Sidebar title styling for both modes - Always white */
+        .sidebar-title {
+            color: #ffffff !important;
+            font-weight: 900 !important;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important;
+        }
+        
+        /* Dark mode text overrides - Enhanced for maximum visibility */
+        [data-theme="dark"] .table-cell,
+        [data-theme="dark"] .table-cell-bold {
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+        
+        [data-theme="dark"] .theme-text {
+            color: #ffffff !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        
+        [data-theme="dark"] .theme-text-secondary {
+            color: #e5e7eb !important;
+        }
+        
+        /* Special styling for NIC numbers in dark mode - Maximum contrast */
+        [data-theme="dark"] .nic-cell {
+            color: #ffffff !important;
+            font-weight: 800 !important;
+            text-shadow: 0 0 4px rgba(255, 255, 255, 0.5), 0 1px 3px rgba(0, 0, 0, 0.8);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2)) !important;
+            border-radius: 6px !important;
+            padding: 4px 8px !important;
+        }
+        
+        /* Enhanced contrast for all text elements in dark mode */
+        [data-theme="dark"] td,
+        [data-theme="dark"] th,
+        [data-theme="dark"] span,
+        [data-theme="dark"] p,
+        [data-theme="dark"] h1,
+        [data-theme="dark"] h2,
+        [data-theme="dark"] h3,
+        [data-theme="dark"] h4 {
+            color: #ffffff !important;
+        }
+        
+        [data-theme="dark"] .text-sm {
+            color: #ffffff !important;
+        }
+        
+        /* Ensure sidebar links have proper colors in dark mode */
+        [data-theme="dark"] .sidebar-link {
+            color: #ffffff !important;
+        }
+        
+        [data-theme="dark"] .sidebar-link:hover {
+            color: #ffffff !important;
+        }
+        
+        [data-theme="dark"] .sidebar-link.active {
+            background: rgba(255, 255, 255, 0.1) !important;
+            color: #ffffff !important;
+            border-left: 4px solid #60a5fa !important;
+        }
+        
+        /* Sidebar title styling for dark mode */
+        [data-theme="dark"] .sidebar-title {
+            color: #ffffff !important;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Enhanced table row backgrounds for dark mode */
+        [data-theme="dark"] .table-row-even {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+        }
+        
+        [data-theme="dark"] .table-row-odd {
+            background: linear-gradient(135deg, #374151 0%, #4b5563 100%) !important;
+        }
+        
+        [data-theme="dark"] .table-row-hover:hover {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+        }
+        
+        /* Dark mode status badges */
+        [data-theme="dark"] .bg-green-100 {
+            background-color: #065f46 !important;
+            color: #d1fae5 !important;
+        }
+        
+        [data-theme="dark"] .bg-yellow-100 {
+            background-color: #92400e !important;
+            color: #fef3c7 !important;
+        }
+        
+        [data-theme="dark"] .bg-gray-100 {
+            background-color: #374151 !important;
+            color: #f3f4f6 !important;
+        }
+        
+        [data-theme="dark"] .bg-blue-100 {
+            background-color: #1e3a8a !important;
+            color: #dbeafe !important;
+        }
+        
+        /* Dark mode button colors */
+        [data-theme="dark"] .text-blue-600 {
+            color: #60a5fa !important;
+        }
+        
+        [data-theme="dark"] .text-green-600 {
+            color: #34d399 !important;
+        }
+        
+        [data-theme="dark"] .text-blue-600:hover {
+            color: #93c5fd !important;
+        }
+        
+        [data-theme="dark"] .text-green-600:hover {
+            color: #6ee7b7 !important;
+        }
+        
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+        
+        .theme-card {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+            box-shadow: var(--card-shadow);
+        }
+        
+        .theme-text {
+            color: var(--text-primary);
+        }
+        
+        .theme-text-secondary {
+            color: var(--text-secondary);
+        }
+        
+        .theme-input {
+            background-color: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-primary);
+        }
+        
+        .theme-input:focus {
+            background-color: var(--input-bg);
+            border-color: #3b82f6;
+            color: var(--text-primary);
+        }
+        
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        .sidebar-gradient { background: var(--bg-sidebar); }
+        .stat-card { background: var(--bg-secondary); }
+        
+        /* Enhanced Colorful table rows with theme support */
+        .table-row-even { 
+            background: var(--table-even);
+            color: var(--text-primary);
+        }
+        .table-row-odd { 
+            background: var(--table-odd);
+            color: var(--text-primary);
+        }
+        .table-row-hover:hover { 
+            background: var(--table-hover);
+            transform: scale(1.01); 
+            color: var(--text-primary);
+        }
+        
+        /* Table headers with theme */
+        .table-header {
+            background-color: var(--bg-primary);
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        /* Enhanced table cells */
+        .table-cell {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .table-cell-bold {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+        
+        /* Theme toggle button */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--card-shadow);
+        }
+        
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+        <i id="theme-icon" class="fas fa-moon theme-text"></i>
+    </button>
+
+    <!-- Sidebar -->
+    <div class="fixed inset-y-0 left-0 z-50 w-64 sidebar-gradient shadow-2xl">
+        <div class="flex items-center justify-center h-20 bg-black/20">
+            <h1 class="text-2xl font-bold sidebar-title">
+                <i class="fas fa-chart-line mr-2 text-blue-400"></i>
+                PRINTCARE
+            </h1>
+        </div>
+        
+        <nav class="mt-8">
+            <a href="#dashboard" onclick="showSection('dashboard')" class="sidebar-link active flex items-center px-6 py-3 text-white hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i class="fas fa-tachometer-alt mr-3"></i>
+                Dashboard
+            </a>
+            <a href="#workers" onclick="showSection('workers')" class="sidebar-link flex items-center px-6 py-3 text-white hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i class="fas fa-users mr-3"></i>
+                Workers
+            </a>
+            <a href="#analytics" onclick="showSection('analytics')" class="sidebar-link flex items-center px-6 py-3 text-white hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i class="fas fa-chart-bar mr-3"></i>
+                Analytics
+            </a>
+            <a href="#reports" onclick="showSection('reports')" class="sidebar-link flex items-center px-6 py-3 text-white hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i class="fas fa-file-alt mr-3"></i>
+                Reports
+            </a>
+            <a href="#settings" onclick="showSection('settings')" class="sidebar-link flex items-center px-6 py-3 text-white hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i class="fas fa-cog mr-3"></i>
+                Settings
+            </a>
+        </nav>
+        
+        <div class="absolute bottom-0 w-full p-6">
+            <a href="/admin/logout" class="flex items-center px-4 py-2 text-red-200 hover:text-white hover:bg-red-500/20 rounded-lg transition-all duration-200">
+                <i class="fas fa-sign-out-alt mr-3"></i>
+                Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="ml-64">        <!-- Top Header -->
+        <header class="theme-card shadow-sm border-b" style="border-color: var(--border-color)">
+            <div class="flex items-center justify-between px-8 py-4">
+                <div>
+                    <h2 class="text-3xl font-bold theme-text">Dashboard</h2>
+                    <p class="theme-text-secondary">Welcome back, Admin!</p>
+                </div>
+                
+                <!-- Success Message Display Area -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            {% if category == 'success' %}
+                                <div id="successMessage" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg flex items-center">
+                                    <i class="fas fa-check-circle mr-2"></i>
+                                    {{ message }}
+                                    <button onclick="closeMessage()" class="ml-4 text-green-500 hover:text-green-700">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Date Picker -->
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-calendar-alt text-gray-500"></i>
+                        <input type="date" id="dateFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                               value="" onchange="updateDashboard()">
+                    </div>
+                    <!-- Recent Update Indicator -->
+                    <div class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                        <i class="fas fa-sync-alt mr-1"></i>
+                        Live Data
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="p-8">
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- Total Workers Card -->
+                <div class="stat-card rounded-xl p-6 shadow-lg card-hover border border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm font-medium">Total Workers</p>
+                            <p id="totalWorkers" class="text-3xl font-bold text-gray-800">122</p>
+                            <p class="text-green-600 text-sm mt-1">
+                                <i class="fas fa-arrow-up mr-1"></i>
+                                +12% from yesterday
+                            </p>
+                        </div>
+                        <div class="bg-blue-100 p-3 rounded-full">
+                            <i class="fas fa-users text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Hours Card -->
+                <div class="stat-card rounded-xl p-6 shadow-lg card-hover border border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm font-medium">Total Hours</p>
+                            <p id="totalHours" class="text-3xl font-bold text-gray-800">867h</p>
+                            <p class="text-green-600 text-sm mt-1">
+                                <i class="fas fa-arrow-up mr-1"></i>
+                                +8% from yesterday
+                            </p>
+                        </div>
+                        <div class="bg-green-100 p-3 rounded-full">
+                            <i class="fas fa-clock text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Average Hours Card -->
+                <div class="stat-card rounded-xl p-6 shadow-lg card-hover border border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm font-medium">Avg Hours/Worker</p>
+                            <p id="avgHours" class="text-3xl font-bold text-gray-800">7.1h</p>
+                            <p class="text-yellow-600 text-sm mt-1">
+                                <i class="fas fa-minus mr-1"></i>
+                                -2% from yesterday
+                            </p>
+                        </div>
+                        <div class="bg-yellow-100 p-3 rounded-full">
+                            <i class="fas fa-chart-line text-yellow-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Today Card -->
+                <div class="stat-card rounded-xl p-6 shadow-lg card-hover border border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm font-medium">Active Today</p>
+                            <p id="activeToday" class="text-3xl font-bold text-gray-800">89</p>
+                            <p class="text-blue-600 text-sm mt-1">
+                                <i class="fas fa-arrow-up mr-1"></i>
+                                73% attendance rate
+                            </p>
+                        </div>
+                        <div class="bg-purple-100 p-3 rounded-full">
+                            <i class="fas fa-user-check text-purple-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Daily Workers Bar Chart -->
+                <div class="theme-card rounded-xl p-6 shadow-lg border" style="border-color: var(--border-color)">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold theme-text">
+                            <i class="fas fa-chart-bar mr-2 text-blue-600"></i>
+                            Daily Workers Count
+                        </h3>
+                        <div class="text-sm theme-text-secondary">
+                            Last 7 Days
+                        </div>
+                    </div>
+                    <div style="height: 300px;">
+                        <canvas id="dailyWorkersChart" height="300"></canvas>
+                    </div>
+                </div>
+
+                <!-- Work Hours Distribution Pie Chart -->
+                <div class="theme-card rounded-xl p-6 shadow-lg border" style="border-color: var(--border-color)">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold theme-text">
+                            <i class="fas fa-chart-pie mr-2 text-green-600"></i>
+                            Work Hours Distribution
+                        </h3>
+                        <div class="text-sm theme-text-secondary">
+                            Today's Total
+                        </div>
+                    </div>
+                    <div style="height: 300px;">
+                        <canvas id="workHoursChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Department Wise Workers (Pie Chart) -->
+                <div class="theme-card rounded-xl p-6 shadow-lg border" style="border-color: var(--border-color)">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold theme-text">
+                            <i class="fas fa-users mr-2 text-purple-600"></i>
+                            Department Distribution
+                        </h3>
+                        <div class="text-sm theme-text-secondary">
+                            Active Workers
+                        </div>
+                    </div>
+                    <div style="height: 300px;">
+                        <canvas id="departmentChart" height="300"></canvas>
+                    </div>
+                </div>
+
+                <!-- Weekly Performance Bar Chart -->
+                <div class="theme-card rounded-xl p-6 shadow-lg border" style="border-color: var(--border-color)">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold theme-text">
+                            <i class="fas fa-chart-line mr-2 text-orange-600"></i>
+                            Weekly Performance
+                        </h3>
+                        <div class="text-sm theme-text-secondary">
+                            Hours vs Target
+                        </div>
+                    </div>
+                    <div style="height: 300px;">
+                        <canvas id="weeklyPerformanceChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Table - Enhanced with better filtering -->
+            <div class="theme-card rounded-xl shadow-lg border mb-4" style="border-color: var(--border-color)">
+                <div class="p-4 border-b" style="border-color: var(--border-color)">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-md font-semibold theme-text">
+                            <i class="fas fa-table mr-2 text-purple-600"></i>
+                            Recent Attendance
+                        </h3>
+                        <button onclick="generateReport()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 text-sm rounded-lg transition-colors duration-200">
+                            <i class="fas fa-download mr-1"></i>
+                            Export
+                        </button>
+                    </div>
+                    
+                    <!-- Enhanced Filter Section -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium theme-text-secondary mb-1">Search by NIC</label>
+                            <input type="text" id="nicFilter" placeholder="Enter NIC number..." 
+                                   class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
+                                   onkeyup="filterAttendanceTable()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium theme-text-secondary mb-1">Search by Company</label>
+                            <input type="text" id="companyFilter" placeholder="Enter company name..." 
+                                   class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
+                                   onkeyup="filterAttendanceTable()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium theme-text-secondary mb-1">Filter by Date</label>
+                            <input type="date" id="attendanceDateFilter" 
+                                   class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
+                                   onchange="filterAttendanceTable()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium theme-text-secondary mb-1">Status Filter</label>
+                            <select id="statusFilter" onchange="filterAttendanceTable()" 
+                                    class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input">
+                                <option value="">All Status</option>
+                                <option value="IN">Check In</option>
+                                <option value="COMPLETED">Completed</option>
+                                <option value="PENDING">Pending</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Clear Filters Button -->
+                    <div class="mt-3 flex justify-end">
+                        <button onclick="clearAttendanceFilters()" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 text-xs rounded-lg transition-colors duration-200">
+                            <i class="fas fa-times mr-1"></i>
+                            Clear Filters
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="table-header">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">NIC Number</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Company</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Date</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">IN Time</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">OUT Time</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTable" class="divide-y divide-gray-200">
+                            <!-- Table data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="px-4 py-3 border-t theme-card" style="border-color: var(--border-color)">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm theme-text-secondary">
+                            Showing <span id="showingCount">1-10</span> of <span id="totalCount">50</span> results
+                        </p>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="previousPage()" class="px-2 py-1 text-xs font-medium border rounded hover:bg-gray-50 theme-card theme-text" style="border-color: var(--border-color)">
+                                Previous
+                            </button>
+                            <button onclick="nextPage()" class="px-2 py-1 text-xs font-medium border rounded hover:bg-gray-50 theme-card theme-text" style="border-color: var(--border-color)">
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workers Section (Hidden by default) -->
+        <div id="workers-section" class="p-8 hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold theme-text">Worker Management</h2>
+                <button onclick="refreshWorkers()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
+                    <i class="fas fa-sync-alt mr-2"></i>
+                    Refresh
+                </button>
+            </div>
+            
+            <!-- Workers Table -->
+            <div class="theme-card rounded-xl shadow-lg border">
+                <div class="p-4 border-b" style="border-color: var(--border-color)">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold theme-text">
+                            <i class="fas fa-users mr-2 text-blue-600"></i>
+                            All Workers Database
+                        </h3>
+                        <button onclick="refreshWorkers()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
+                            <i class="fas fa-sync-alt mr-2"></i>
+                            Refresh Data
+                        </button>
+                    </div>
+                    
+                    <!-- Enhanced Filter Section for Workers -->
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+                        <div>
+                            <label class="block text-xs font-medium theme-text-secondary mb-1">Search by NIC</label>
+                            <input type="text" id="workerNicSearch" placeholder="Enter NIC number..." 
+                                   class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
+                                   onkeyup="filterWorkersTable()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium theme-text-secondary mb-1">Search by Company</label>
+                            <input type="text" id="workerCompanySearch" placeholder="Enter company name..." 
+                                   class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
+                                   onkeyup="filterWorkersTable()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium theme-text-secondary mb-1">Last Active Date</label>
+                            <input type="date" id="workerDateFilter" 
+                                   class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
+                                   onchange="filterWorkersTable()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium theme-text-secondary mb-1">Status Filter</label>
+                            <select id="workerStatusFilter" onchange="filterWorkersTable()" 
+                                    class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input">
+                                <option value="">All Status</option>
+                                <option value="ACTIVE">Active Today</option>
+                                <option value="IN">Checked In</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="clearWorkerFilters()" class="w-full bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 text-sm rounded-lg transition-colors duration-200">
+                                <i class="fas fa-times mr-1"></i>
+                                Clear All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="table-header">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">NIC Number</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Company</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Last Active</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Total Hours</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Status</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workersTable" class="divide-y divide-gray-200">
+                            <!-- Workers data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="px-4 py-3 border-t" style="background-color: var(--bg-primary); border-color: var(--border-color)">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm theme-text-secondary">
+                            Showing <span id="workersShowingCount">1-10</span> of <span id="workersTotalCount">0</span> workers
+                        </p>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="previousWorkersPage()" class="px-3 py-1 text-sm font-medium border rounded hover:bg-gray-50 theme-card theme-text" style="border-color: var(--border-color)">
+                                Previous
+                            </button>
+                            <button onclick="nextWorkersPage()" class="px-3 py-1 text-sm font-medium border rounded hover:bg-gray-50 theme-card theme-text" style="border-color: var(--border-color)">
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section (Hidden by default) -->
+        <div id="analytics-section" class="p-8 hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold theme-text">Advanced Analytics</h2>
+                <div class="flex items-center space-x-3">
+                    <select id="analyticsFilter" onchange="updateAnalytics()" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 theme-card theme-text" style="border-color: var(--border-color)">
+                        <option value="daily">Daily View</option>
+                        <option value="weekly">Weekly View</option>
+                        <option value="monthly">Monthly View</option>
+                    </select>
+                    <input type="date" id="analyticsDate" onchange="updateAnalytics()" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 theme-card theme-text" style="border-color: var(--border-color)">
+                </div>
+            </div>
+            
+            <!-- Analytics Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Attendance Chart -->
+                <div class="theme-card rounded-xl p-6 shadow-lg border" style="border-color: var(--border-color)">
+                    <h3 class="text-lg font-semibold theme-text mb-4">
+                        <i class="fas fa-chart-bar mr-2 text-blue-600"></i>
+                        Attendance Overview
+                    </h3>
+                    <canvas id="analyticsAttendanceChart" height="250"></canvas>
+                </div>
+
+                <!-- Hours Chart -->
+                <div class="theme-card rounded-xl p-6 shadow-lg border" style="border-color: var(--border-color)">
+                    <h3 class="text-lg font-semibold theme-text mb-4">
+                        <i class="fas fa-clock mr-2 text-green-600"></i>
+                        Work Hours Analysis
+                    </h3>
+                    <canvas id="analyticsHoursChart" height="250"></canvas>
+                </div>
+            </div>
+            
+            <!-- Performance Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="theme-card rounded-xl p-6 shadow-lg border card-hover" style="border-color: var(--border-color)">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="theme-text-secondary text-sm font-medium">Peak Hours</p>
+                            <p id="peakHours" class="text-2xl font-bold theme-text">9-11 AM</p>
+                        </div>
+                        <div class="bg-blue-100 p-3 rounded-full">
+                            <i class="fas fa-chart-line text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="theme-card rounded-xl p-6 shadow-lg border card-hover" style="border-color: var(--border-color)">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="theme-text-secondary text-sm font-medium">Efficiency Rate</p>
+                            <p id="efficiencyRate" class="text-2xl font-bold theme-text">94.5%</p>
+                        </div>
+                        <div class="bg-green-100 p-3 rounded-full">
+                            <i class="fas fa-percentage text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="theme-card rounded-xl p-6 shadow-lg border card-hover" style="border-color: var(--border-color)">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="theme-text-secondary text-sm font-medium">Trend</p>
+                            <p id="trendIndicator" class="text-2xl font-bold text-green-600">↗ +12%</p>
+                        </div>
+                        <div class="bg-purple-100 p-3 rounded-full">
+                            <i class="fas fa-trending-up text-purple-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Section (Hidden by default) -->
+        <div id="reports-section" class="p-8 hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Reports</h2>
+            <!-- Reports content here -->
+        </div>
+
+        <!-- Settings Section (Hidden by default) -->
+        <div id="settings-section" class="p-8 hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Settings</h2>
+            <!-- Settings content here -->
+        </div>
+    </div>
+
+    <script>
+        // Auto-hide success message after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const successMessage = document.getElementById('successMessage');
+            if (successMessage) {
+                setTimeout(function() {
+                    successMessage.style.transition = 'opacity 0.5s ease-out';
+                    successMessage.style.opacity = '0';
+                    setTimeout(function() {
+                        successMessage.remove();
+                    }, 500);
+                }, 5000);
+            }
+        });
+
+        // Close message manually
+        function closeMessage() {
+            const successMessage = document.getElementById('successMessage');
+            if (successMessage) {
+                successMessage.style.transition = 'opacity 0.3s ease-out';
+                successMessage.style.opacity = '0';
+                setTimeout(function() {
+                    successMessage.remove();
+                }, 300);
+            }
+        }
+
+        // Global variables
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentData = [];
+        let workersCurrentPage = 1;
+        let workersTotalPages = 1;
+        let workersData = [];
+        let analyticsChart1, analyticsChart2;
+
+        // Initialize dashboard with enhanced styling and login check
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if admin is logged in first
+            checkAuthenticationStatus();
+            
+            // Set today's date as default
+            document.getElementById('dateFilter').value = new Date().toISOString().split('T')[0];
+            document.getElementById('analyticsDate').value = new Date().toISOString().split('T')[0];
+            
+            // Load initial data
+            updateDashboard();
+            
+            // Setup charts
+            setupCharts();
+            
+            // Load theme preference
+            loadThemePreference();
+            
+            // Apply initial NIC styling
+            setTimeout(applyNicStyling, 500);
+            
+            // Set up mutation observer to apply styling when DOM changes
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'childList') {
+                        setTimeout(applyNicStyling, 50);
+                    }
+                });
+            });
+            
+            // Observe changes to table bodies
+            const attendanceTable = document.getElementById('attendanceTable');
+            const workersTable = document.getElementById('workersTable');
+            
+            if (attendanceTable) {
+                observer.observe(attendanceTable, { childList: true, subtree: true });
+            }
+            if (workersTable) {
+                observer.observe(workersTable, { childList: true, subtree: true });
+            }
+        });
+
+        // Theme Management with comprehensive text updates
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.getElementById('theme-icon');
+            
+            if (body.hasAttribute('data-theme')) {
+                body.removeAttribute('data-theme');
+                icon.className = 'fas fa-moon theme-text';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                icon.className = 'fas fa-sun theme-text';
+                localStorage.setItem('theme', 'dark');
+            }
+            
+            // Apply comprehensive text styling after theme change
+            setTimeout(() => {
+                applyNicStyling();
+                // Ensure icon gets proper color
+                const themeIcon = document.getElementById('theme-icon');
+                if (body.hasAttribute('data-theme')) {
+                    themeIcon.style.color = '#ffffff';
+                } else {
+                    themeIcon.style.color = '#1f2937';
+                }
+            }, 50);
+            
+            // Refresh dashboard charts with new theme
+            setTimeout(() => {
+                setupDashboardCharts();
+                updateAnalytics();
+            }, 200);
+        }
+
+        function loadThemePreference() {
+            const savedTheme = localStorage.getItem('theme');
+            const icon = document.getElementById('theme-icon');
+            
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                icon.className = 'fas fa-sun theme-text';
+                icon.style.color = '#ffffff';
+            } else {
+                icon.className = 'fas fa-moon theme-text';
+                icon.style.color = '#1f2937';
+            }
+            
+            // Apply text styling after theme is loaded
+            setTimeout(applyNicStyling, 100);
+            
+            // Ensure PRINTCARE sidebar title is always white
+            setTimeout(applySidebarTitleStyling, 50);
+        }
+
+        // Function to ensure PRINTCARE title is always white
+        function applySidebarTitleStyling() {
+            const sidebarTitle = document.querySelector('.sidebar-title');
+            if (sidebarTitle) {
+                sidebarTitle.style.color = '#ffffff !important';
+                sidebarTitle.style.fontWeight = '900';
+                sidebarTitle.style.textShadow = '0 2px 4px rgba(0, 0, 0, 0.8)';
+            }
+        }
+
+        // Authentication check function
+        async function checkAuthenticationStatus() {
+            try {
+                const response = await fetch('/admin/api/check-auth', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                if (!response.ok || response.status === 401) {
+                    // Not authenticated, redirect to login
+                    console.log('Authentication check failed, redirecting to login...');
+                    window.location.href = '/admin/login';
+                    return false;
+                }
+                
+                const data = await response.json();
+                if (!data.authenticated) {
+                    console.log('User not authenticated, redirecting to login...');
+                    window.location.href = '/admin/login';
+                    return false;
+                }
+                
+                console.log('Authentication check passed');
+                return true;
+            } catch (error) {
+                console.error('Error checking authentication:', error);
+                // On error, redirect to login for safety
+                window.location.href = '/admin/login';
+                return false;
+            }
+        }
+
+        // Navigation functions with better error handling
+        function showSection(sectionName) {
+            console.log(`Switching to section: ${sectionName}`);
+            
+            // Hide all sections
+            const sections = ['dashboard', 'workers', 'analytics', 'reports', 'settings'];
+            sections.forEach(section => {
+                const element = document.getElementById(section + '-section');
+                if (element) {
+                    element.classList.add('hidden');
+                }
+            });
+            
+            // Show selected section
+            const targetSection = document.getElementById(sectionName + '-section');
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+            }
+            
+            // Update sidebar active state - Remove active from all links
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Add active to clicked link
+            if (event && event.target) {
+                // Handle both the link itself and its parent if clicked on icon
+                const linkElement = event.target.closest('.sidebar-link');
+                if (linkElement) {
+                    linkElement.classList.add('active');
+                }
+            }
+            
+            // Load section-specific data
+            if (sectionName === 'workers') {
+                console.log('Loading workers section...');
+                setTimeout(() => {
+                    loadWorkers();
+                }, 100);
+            } else if (sectionName === 'analytics') {
+                console.log('Loading analytics section...');
+                updateAnalytics();
+            }
+        }
+
+        // Apply enhanced NIC cell styling after DOM updates
+        function applyNicStyling() {
+            // Apply special styling to all NIC cells
+            const nicCells = document.querySelectorAll('.nic-cell');
+            const isDarkMode = document.body.hasAttribute('data-theme');
+            
+            nicCells.forEach(cell => {
+                if (isDarkMode) {
+                    // Dark mode - Maximum contrast white text
+                    cell.style.color = '#ffffff';
+                    cell.style.fontWeight = '800';
+                    cell.style.textShadow = '0 0 4px rgba(255, 255, 255, 0.5), 0 1px 3px rgba(0, 0, 0, 0.8)';
+                    cell.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))';
+                    cell.style.borderRadius = '6px';
+                    cell.style.padding = '4px 8px';
+                    cell.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                } else {
+                    // Light mode - Dark black text with better contrast
+                    cell.style.color = '#1f2937';
+                    cell.style.fontWeight = '800';
+                    cell.style.textShadow = '0 1px 2px rgba(0, 0, 0, 0.1)';
+                    cell.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))';
+                    cell.style.borderRadius = '6px';
+                    cell.style.padding = '4px 8px';
+                    cell.style.border = '1px solid rgba(59, 130, 246, 0.2)';
+                }
+            });
+            
+            // Apply general text styling based on theme
+            const allTextElements = document.querySelectorAll('.table-cell, .table-cell-bold, td, th, span, p, h1, h2, h3, h4, .text-sm');
+            allTextElements.forEach(element => {
+                if (!element.classList.contains('nic-cell')) {
+                    if (isDarkMode) {
+                        // Dark mode - White text
+                        element.style.color = '#ffffff';
+                        element.style.textShadow = '0 1px 2px rgba(0, 0, 0, 0.5)';
+                    } else {
+                        // Light mode - Black text
+                        element.style.color = '#1f2937';
+                        element.style.textShadow = 'none';
+                    }
+                }
+            });
+            
+            // Apply theme text classes
+            const themeTexts = document.querySelectorAll('.theme-text');
+            themeTexts.forEach(element => {
+                if (isDarkMode) {
+                    element.style.color = '#ffffff';
+                } else {
+                    element.style.color = '#1f2937';
+                }
+            });
+            
+            const themeSecondaryTexts = document.querySelectorAll('.theme-text-secondary');
+            themeSecondaryTexts.forEach(element => {
+                if (isDarkMode) {
+                    element.style.color = '#e5e7eb';
+                } else {
+                    element.style.color = '#6b7280';
+                }
+            });
+            
+            // Apply sidebar title styling - Always white
+            const sidebarTitle = document.querySelector('.sidebar-title');
+            if (sidebarTitle) {
+                // Always white text for PRINTCARE title in both modes
+                sidebarTitle.style.color = '#ffffff';
+                sidebarTitle.style.fontWeight = '900';
+                if (isDarkMode) {
+                    sidebarTitle.style.textShadow = '0 2px 4px rgba(0, 0, 0, 0.8)';
+                } else {
+                    sidebarTitle.style.textShadow = '0 2px 4px rgba(0, 0, 0, 0.6)';
+                }
+            }
+        }
+
+        // Update attendance table with colorful rows
+        function updateAttendanceTable(records) {
+            const tbody = document.getElementById('attendanceTable');
+            tbody.innerHTML = '';
+            
+            currentData = records;
+            const startIndex = (currentPage - 1) * 10;
+            const endIndex = startIndex + 10;
+            const pageRecords = records.slice(startIndex, endIndex);
+            
+            pageRecords.forEach((record, index) => {
+                const rowClass = index % 2 === 0 ? 'table-row-even' : 'table-row-odd';
+                const row = `
+                    <tr class="table-row-hover ${rowClass} transition-all duration-200">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">${record.nic}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${record.company || 'N/A'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${record.date}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${record.in_time || 'N/A'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${record.out_time || 'N/A'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="px-3 py-1 text-xs font-bold rounded-full ${getStatusColor(record)} shadow-sm">
+                                ${record.status || 'PENDING'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+            
+            // Update pagination info
+            totalPages = Math.ceil(records.length / 10);
+            document.getElementById('showingCount').textContent = `${startIndex + 1}-${Math.min(endIndex, records.length)}`;
+            document.getElementById('totalCount').textContent = records.length;
+        }
+
+        // Update dashboard data
+        async function updateDashboard() {
+            const selectedDate = document.getElementById('dateFilter').value;
+            
+            try {
+                // Fetch attendance data for selected date
+                const response = await fetch(`/admin/api/stats?date=${selectedDate}`);
+                const data = await response.json();
+                
+                if (data && !data.error) {
+                    updateSummaryCards(data);
+                    loadRecentAttendance();
+                }
+            } catch (error) {
+                console.error('Error updating dashboard:', error);
+            }
+        }
+
+        // Load recent attendance data
+        async function loadRecentAttendance() {
+            try {
+                const response = await fetch('/admin/api/search-attendance');
+                const data = await response.json();
+                
+                if (data.success && data.records) {
+                    updateAttendanceTable(data.records);
+                }
+            } catch (error) {
+                console.error('Error loading recent attendance:', error);
+            }
+        }
+
+        // Update summary cards
+        function updateSummaryCards(data) {
+            document.getElementById('totalWorkers').textContent = data.total_employees || 0;
+            document.getElementById('totalHours').textContent = (data.date_hours || 0) + 'h';
+            document.getElementById('avgHours').textContent = data.date_hours ? (data.date_hours / Math.max(data.date_attendance, 1)).toFixed(1) + 'h' : '0h';
+            document.getElementById('activeToday').textContent = data.date_attendance || 0;
+        }
+
+        // Update attendance table with colorful rows
+        function updateAttendanceTable(records) {
+            const tbody = document.getElementById('attendanceTable');
+            tbody.innerHTML = '';
+            
+            currentData = records;
+            const startIndex = (currentPage - 1) * 10;
+            const endIndex = startIndex + 10;
+            const pageRecords = records.slice(startIndex, endIndex);
+            
+            pageRecords.forEach((record, index) => {
+                const rowClass = index % 2 === 0 ? 'table-row-even' : 'table-row-odd';
+                const row = `
+                    <tr class="table-row-hover ${rowClass} transition-all duration-200">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">${record.nic}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${record.company || 'N/A'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${record.date}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${record.in_time || 'N/A'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${record.out_time || 'N/A'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="px-3 py-1 text-xs font-bold rounded-full ${getStatusColor(record)} shadow-sm">
+                                ${record.status || 'PENDING'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+            
+            // Update pagination info
+            totalPages = Math.ceil(records.length / 10);
+            document.getElementById('showingCount').textContent = `${startIndex + 1}-${Math.min(endIndex, records.length)}`;
+            document.getElementById('totalCount').textContent = records.length;
+        }
+
+        // Helper functions for status
+        function getStatusColor(record) {
+            if (record.status === 'COMPLETED') return 'bg-green-100 text-green-800';
+            if (record.status === 'IN') return 'bg-yellow-100 text-yellow-800';
+            return 'bg-gray-100 text-gray-800';
+        }
+
+        function getWorkerStatusColor(worker) {
+            if (worker.status === 'ACTIVE') return 'bg-green-100 text-green-800';
+            if (worker.status === 'IN') return 'bg-yellow-100 text-yellow-800';
+            return 'bg-gray-100 text-gray-800';
+        }
+
+        // Enhanced filter function for attendance table with multiple filters
+        async function filterAttendanceTable() {
+            const nicFilter = document.getElementById('nicFilter').value.trim();
+            const companyFilter = document.getElementById('companyFilter').value.trim();
+            const dateFilter = document.getElementById('attendanceDateFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            try {
+                let url = '/admin/api/search-attendance?';
+                const params = [];
+                
+                if (nicFilter) params.push(`nic=${encodeURIComponent(nicFilter)}`);
+                if (companyFilter) params.push(`company=${encodeURIComponent(companyFilter)}`);
+                if (dateFilter) params.push(`date=${encodeURIComponent(dateFilter)}`);
+                if (statusFilter) params.push(`status=${encodeURIComponent(statusFilter)}`);
+                
+                url += params.join('&');
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentData = data.records;
+                    currentPage = 1;
+                    updateAttendanceTable(currentData);
+                }
+            } catch (error) {
+                console.error('Error filtering attendance:', error);
+            }
+        }
+
+        // Clear all attendance filters
+        function clearAttendanceFilters() {
+            document.getElementById('nicFilter').value = '';
+            document.getElementById('companyFilter').value = '';
+            document.getElementById('attendanceDateFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            loadRecentAttendance();
+        }
+
+        // Filter table by NIC - Legacy support
+        async function filterTable() {
+            await filterAttendanceTable();
+        }
+
+        // Pagination functions
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                updateAttendanceTable(currentData);
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                updateAttendanceTable(currentData);
+            }
+        }
+
+        // Setup charts with improved responsiveness and readability
+        function setupCharts() {
+            // Chart.js defaults for better dark mode support
+            Chart.defaults.color = document.body.hasAttribute('data-theme') ? '#ffffff' : '#374151';
+            Chart.defaults.borderColor = document.body.hasAttribute('data-theme') ? '#4B5563' : '#E5E7EB';
+            
+            // Setup dashboard charts immediately
+            setupDashboardCharts();
+            
+            // Only setup analytics charts when needed
+            console.log('Charts setup ready for analytics section');
+        }
+
+        // Setup Dashboard Charts with dummy data
+        function setupDashboardCharts() {
+            const isDarkMode = document.body.hasAttribute('data-theme');
+            const textColor = isDarkMode ? '#ffffff' : '#374151';
+            const gridColor = isDarkMode ? 'rgba(75, 85, 99, 0.3)' : 'rgba(0,0,0,0.1)';
+            const tooltipBg = isDarkMode ? '#1F2937' : '#ffffff';
+            const tooltipBorder = isDarkMode ? '#4B5563' : '#E5E7EB';
+
+            // Daily Workers Bar Chart
+            const ctx1 = document.getElementById('dailyWorkersChart');
+            if (ctx1) {
+                new Chart(ctx1.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Workers Count',
+                            data: [45, 52, 48, 61, 55, 35, 20],
+                            backgroundColor: [
+                                'rgba(59, 130, 246, 0.8)',
+                                'rgba(16, 185, 129, 0.8)',
+                                'rgba(245, 158, 11, 0.8)',
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(139, 92, 246, 0.8)',
+                                'rgba(236, 72, 153, 0.8)',
+                                'rgba(6, 182, 212, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(59, 130, 246, 1)',
+                                'rgba(16, 185, 129, 1)',
+                                'rgba(245, 158, 11, 1)',
+                                'rgba(239, 68, 68, 1)',
+                                'rgba(139, 92, 246, 1)',
+                                'rgba(236, 72, 153, 1)',
+                                'rgba(6, 182, 212, 1)'
+                            ],
+                            borderWidth: 2,
+                            borderRadius: 8,
+                            maxBarThickness: 60
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { 
+                                display: true,
+                                labels: {
+                                    font: { size: 12, weight: 'bold' },
+                                    color: textColor,
+                                    padding: 20
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: tooltipBg,
+                                titleColor: textColor,
+                                bodyColor: textColor,
+                                borderColor: tooltipBorder,
+                                borderWidth: 1,
+                                cornerRadius: 8
+                            }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true,
+                                ticks: {
+                                    font: { size: 11, weight: 'bold' },
+                                    color: textColor
+                                },
+                                grid: { color: gridColor }
+                            },
+                            x: { 
+                                ticks: {
+                                    font: { size: 11, weight: 'bold' },
+                                    color: textColor
+                                },
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Work Hours Pie Chart
+            const ctx2 = document.getElementById('workHoursChart');
+            if (ctx2) {
+                new Chart(ctx2.getContext('2d'), {
+                    type: 'pie',
+                    data: {
+                        labels: ['Morning Shift', 'Afternoon Shift', 'Evening Shift', 'Night Shift'],
+                        datasets: [{
+                            data: [35, 25, 20, 20],
+                            backgroundColor: [
+                                'rgba(59, 130, 246, 0.8)',
+                                'rgba(16, 185, 129, 0.8)',
+                                'rgba(245, 158, 11, 0.8)',
+                                'rgba(239, 68, 68, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(59, 130, 246, 1)',
+                                'rgba(16, 185, 129, 1)',
+                                'rgba(245, 158, 11, 1)',
+                                'rgba(239, 68, 68, 1)'
+                            ],
+                            borderWidth: 2,
+                            hoverOffset: 15
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: { size: 12, weight: 'bold' },
+                                    color: textColor,
+                                    padding: 20,
+                                    usePointStyle: true
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: tooltipBg,
+                                titleColor: textColor,
+                                bodyColor: textColor,
+                                borderColor: tooltipBorder,
+                                borderWidth: 1,
+                                cornerRadius: 8,
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.label + ': ' + context.parsed + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Department Distribution Pie Chart
+            const ctx3 = document.getElementById('departmentChart');
+            if (ctx3) {
+                new Chart(ctx3.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Production', 'Quality Control', 'Maintenance', 'Administration', 'Security'],
+                        datasets: [{
+                            data: [40, 25, 15, 12, 8],
+                            backgroundColor: [
+                                'rgba(139, 92, 246, 0.8)',
+                                'rgba(236, 72, 153, 0.8)',
+                                'rgba(6, 182, 212, 0.8)',
+                                'rgba(245, 158, 11, 0.8)',
+                                'rgba(239, 68, 68, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(139, 92, 246, 1)',
+                                'rgba(236, 72, 153, 1)',
+                                'rgba(6, 182, 212, 1)',
+                                'rgba(245, 158, 11, 1)',
+                                'rgba(239, 68, 68, 1)'
+                            ],
+                            borderWidth: 2,
+                            hoverOffset: 10,
+                            cutout: '50%'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: { size: 11, weight: 'bold' },
+                                    color: textColor,
+                                    padding: 15,
+                                    usePointStyle: true
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: tooltipBg,
+                                titleColor: textColor,
+                                bodyColor: textColor,
+                                borderColor: tooltipBorder,
+                                borderWidth: 1,
+                                cornerRadius: 8,
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.label + ': ' + context.parsed + ' workers';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Weekly Performance Bar Chart
+            const ctx4 = document.getElementById('weeklyPerformanceChart');
+            if (ctx4) {
+                new Chart(ctx4.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                        datasets: [{
+                            label: 'Actual Hours',
+                            data: [320, 380, 350, 410],
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 2,
+                            borderRadius: 8
+                        }, {
+                            label: 'Target Hours',
+                            data: [400, 400, 400, 400],
+                            backgroundColor: 'rgba(239, 68, 68, 0.5)',
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 2,
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: {
+                                    font: { size: 12, weight: 'bold' },
+                                    color: textColor,
+                                    padding: 20
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: tooltipBg,
+                                titleColor: textColor,
+                                bodyColor: textColor,
+                                borderColor: tooltipBorder,
+                                borderWidth: 1,
+                                cornerRadius: 8,
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y + 'h';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true,
+                                ticks: {
+                                    font: { size: 11, weight: 'bold' },
+                                    color: textColor,
+                                    callback: function(value) {
+                                        return value + 'h';
+                                    }
+                                },
+                                grid: { color: gridColor }
+                            },
+                            x: { 
+                                ticks: {
+                                    font: { size: 11, weight: 'bold' },
+                                    color: textColor
+                                },
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Generate report
+        function generateReport() {
+            const selectedDate = document.getElementById('dateFilter').value;
+            window.open(`/admin/api/export-report?date=${selectedDate}`, '_blank');
+        }
+
+        // Workers Management Functions
+        async function loadWorkers() {
+            console.log('Loading workers data...');
+            try {
+                const response = await fetch('/admin/api/workers');
+                const data = await response.json();
+                
+                console.log('Workers API response:', data);
+                
+                if (data.success && data.workers) {
+                    workersData = data.workers;
+                    updateWorkersTable(data.workers);
+                    console.log(`Loaded ${data.workers.length} workers`);
+                } else {
+                    console.error('Failed to load workers:', data.error);
+                    // Show error message to user
+                    document.getElementById('workersTable').innerHTML = `
+                        <tr><td colspan="6" class="px-4 py-8 text-center theme-text">
+                            <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                            Failed to load workers data: ${data.error || 'Unknown error'}
+                        </td></tr>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading workers:', error);
+                document.getElementById('workersTable').innerHTML = `
+                    <tr><td colspan="6" class="px-4 py-8 text-center theme-text">
+                        <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+                        Error connecting to server. Please try again.
+                    </td></tr>
+                `;
+            }
+        }
+
+        // Enhanced Workers table update with theme support and better error handling
+        function updateWorkersTable(workers) {
+            const tbody = document.getElementById('workersTable');
+            
+            if (!workers || workers.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="6" class="px-4 py-8 text-center theme-text">
+                        <i class="fas fa-users text-gray-400 mr-2"></i>
+                        No workers found in database
+                    </td></tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            // Store original data for filtering
+            if (arguments.length === 1) {
+                workersData = workers;
+            }
+            
+            const startIndex = (workersCurrentPage - 1) * 10;
+            const endIndex = startIndex + 10;
+            const pageWorkers = workers.slice(startIndex, endIndex);
+            
+            pageWorkers.forEach((worker, index) => {
+                const rowClass = index % 2 === 0 ? 'table-row-even' : 'table-row-odd';
+                const row = `
+                    <tr class="table-row-hover ${rowClass} transition-all duration-200">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm nic-cell">${worker.nic || 'N/A'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm table-cell">${worker.company || 'N/A'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm table-cell">${worker.last_active || 'Never'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm table-cell">${worker.total_hours || 0}h</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="px-3 py-1 text-xs font-bold rounded-full ${getWorkerStatusColor(worker)} shadow-sm">
+                                ${worker.status || 'INACTIVE'}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm">
+                            <button onclick="viewWorkerDetails('${worker.nic}')" class="text-blue-600 hover:text-blue-900 mr-2" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button onclick="exportWorkerData('${worker.nic}')" class="text-green-600 hover:text-green-900" title="Export Data">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+            
+            // Update pagination info
+            workersTotalPages = Math.ceil(workers.length / 10);
+            document.getElementById('workersShowingCount').textContent = `${startIndex + 1}-${Math.min(endIndex, workers.length)}`;
+            document.getElementById('workersTotalCount').textContent = workers.length;
+            
+            console.log(`Updated workers table with ${workers.length} workers`);
+        }
+
+        // Enhanced filtering for workers table with improved debugging
+        function filterWorkersTable() {
+            console.log('🔍 Starting Workers table filtering...');
+            
+            if (!workersData || workersData.length === 0) {
+                console.log('❌ No workers data available for filtering');
+                
+                // Try to reload workers data
+                console.log('🔄 Attempting to reload workers data...');
+                loadWorkers();
+                return;
+            }
+            
+            const nicFilter = document.getElementById('workerNicSearch').value.toLowerCase().trim();
+            const companyFilter = document.getElementById('workerCompanySearch').value.toLowerCase().trim();
+            const dateFilter = document.getElementById('workerDateFilter').value.trim();
+            const statusFilter = document.getElementById('workerStatusFilter').value.trim();
+            
+            console.log('🎯 Applied Filters:', { 
+                nic: nicFilter, 
+                company: companyFilter, 
+                date: dateFilter, 
+                status: statusFilter,
+                originalDataLength: workersData.length
+            });
+            
+            let filtered = [...workersData]; // Create a copy to avoid mutation
+            console.log(`📊 Starting with ${filtered.length} workers`);
+            
+            // Apply NIC filter
+            if (nicFilter) {
+                const beforeLength = filtered.length;
+                filtered = filtered.filter(worker => {
+                    const workerNic = worker.nic ? worker.nic.toLowerCase() : '';
+                    return workerNic.includes(nicFilter);
+                });
+                console.log(`🔍 NIC filter: ${beforeLength} → ${filtered.length} workers`);
+            }
+            
+            // Apply Company filter
+            if (companyFilter) {
+                const beforeLength = filtered.length;
+                filtered = filtered.filter(worker => {
+                    const workerCompany = worker.company ? worker.company.toLowerCase() : '';
+                    return workerCompany.includes(companyFilter);
+                });
+                console.log(`🏢 Company filter: ${beforeLength} → ${filtered.length} workers`);
+            }
+            
+            // Apply Date filter
+            if (dateFilter) {
+                const beforeLength = filtered.length;
+                filtered = filtered.filter(worker => {
+                    return worker.last_active && worker.last_active === dateFilter;
+                });
+                console.log(`📅 Date filter: ${beforeLength} → ${filtered.length} workers`);
+            }
+            
+            // Apply Status filter
+            if (statusFilter) {
+                const beforeLength = filtered.length;
+                filtered = filtered.filter(worker => {
+                    return worker.status && worker.status === statusFilter;
+                });
+                console.log(`📊 Status filter: ${beforeLength} → ${filtered.length} workers`);
+            }
+            
+            console.log(`✅ Final filtered results: ${filtered.length} workers out of ${workersData.length} total`);
+            
+            // Reset to first page and update table
+            workersCurrentPage = 1;
+            updateWorkersTable(filtered);
+            
+            // Show filtering result message
+            if (filtered.length === 0) {
+                console.log('🚫 No workers match the current filters');
+            }
+        }
+
+        // Clear all worker filters and reset to original data
+        function clearWorkerFilters() {
+            console.log('Clearing worker filters...');
+            document.getElementById('workerNicSearch').value = '';
+            document.getElementById('workerCompanySearch').value = '';
+            document.getElementById('workerDateFilter').value = '';
+            document.getElementById('workerStatusFilter').value = '';
+            
+            // Reset to original data
+            workersCurrentPage = 1;
+            updateWorkersTable(workersData);
+            console.log('Worker filters cleared');
+        }
+
+        // Refresh workers data from server
+        function refreshWorkers() {
+            console.log('Refreshing workers data...');
+            
+            // Clear filters first
+            clearWorkerFilters();
+            
+            // Show loading message
+            document.getElementById('workersTable').innerHTML = `
+                <tr><td colspan="6" class="px-4 py-8 text-center theme-text">
+                    <i class="fas fa-spinner fa-spin text-blue-500 mr-2"></i>
+                    Loading workers data...
+                </td></tr>
+            `;
+            
+            // Reload data
+            loadWorkers();
+        }
+
+        function previousWorkersPage() {
+            if (workersCurrentPage > 1) {
+                workersCurrentPage--;
+                updateWorkersTable(workersData);
+            }
+        }
+
+        function nextWorkersPage() {
+            if (workersCurrentPage < workersTotalPages) {
+                workersCurrentPage++;
+                updateWorkersTable(workersData);
+            }
+        }
+
+        // Legacy function support
+        function searchWorkers() {
+            filterWorkersTable();
+        }
+
+        function filterWorkers() {
+            filterWorkersTable();
+        }
+
+        function viewWorkerDetails(nic) {
+            // Show worker details in a modal or alert
+            const worker = workersData.find(w => w.nic === nic);
+            if (worker) {
+                alert(`Worker Details:\n\nNIC: ${worker.nic}\nCompany: ${worker.company}\nLast Active: ${worker.last_active}\nTotal Sessions: ${worker.total_hours}\nStatus: ${worker.status}`);
+            } else {
+                alert(`Worker with NIC ${nic} not found.`);
+            }
+        }
+
+        function exportWorkerData(nic) {
+            // Export worker data
+            window.open(`/admin/api/export-worker?nic=${encodeURIComponent(nic)}`, '_blank');
+        }
+
+        // Analytics Functions
+        async function updateAnalytics() {
+            const filter = document.getElementById('analyticsFilter').value;
+            const date = document.getElementById('analyticsDate').value;
+            
+            try {
+                const response = await fetch(`/admin/api/analytics?filter=${filter}&date=${date}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateAnalyticsCharts(data.analytics, filter);
+                }
+            } catch (error) {
+                console.error('Error updating analytics:', error);
+                // Use sample data if API fails
+                updateAnalyticsCharts(getSampleAnalyticsData(filter), filter);
+            }
+        }
+
+        function updateAnalyticsCharts(data, filter) {
+            // Destroy existing charts
+            if (analyticsChart1) analyticsChart1.destroy();
+            if (analyticsChart2) analyticsChart2.destroy();
+            
+            // Get theme colors
+            const isDarkMode = document.body.hasAttribute('data-theme');
+            const textColor = isDarkMode ? '#ffffff' : '#374151';
+            const gridColor = isDarkMode ? 'rgba(75, 85, 99, 0.3)' : 'rgba(0,0,0,0.1)';
+            const tooltipBg = isDarkMode ? '#1F2937' : '#ffffff';
+            const tooltipBorder = isDarkMode ? '#4B5563' : '#E5E7EB';
+            
+            // Create new charts with improved styling
+            const ctx1 = document.getElementById('analyticsAttendanceChart').getContext('2d');
+            const ctx2 = document.getElementById('analyticsHoursChart').getContext('2d');
+            
+            // Enhanced Attendance Chart with colorful bars
+            analyticsChart1 = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Attendance Count',
+                        data: data.attendance,
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(139, 92, 246, 0.8)',
+                            'rgba(236, 72, 153, 0.8)',
+                            'rgba(6, 182, 212, 0.8)'
+                        ].slice(0, data.labels.length),
+                        borderColor: [
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(16, 185, 129, 1)',
+                            'rgba(245, 158, 11, 1)',
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(139, 92, 246, 1)',
+                            'rgba(236, 72, 153, 1)',
+                            'rgba(6, 182, 212, 1)'
+                        ].slice(0, data.labels.length),
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        maxBarThickness: 60
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            display: true,
+                            labels: {
+                                font: { size: 12, weight: 'bold' },
+                                color: textColor,
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: tooltipBg,
+                            titleColor: textColor,
+                            bodyColor: textColor,
+                            borderColor: tooltipBorder,
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y + ' workers';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: {
+
+                                font: { size: 11, weight: 'bold' },
+                                color: textColor,
+                                stepSize: Math.max(1, Math.ceil(Math.max(...data.attendance) / 8))
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        },
+                        x: { 
+                            ticks: {
+                                font: { size: 11, weight: 'bold' },
+                                color: textColor,
+                                maxRotation: 45
+                            },
+                            grid: { 
+                                display: false 
+                            } 
+                        }
+                    },
+                    layout: {
+                        padding: {
+                            top: 20,
+                            bottom: 20,
+                            left: 20,
+                            right: 20
+                        }
+                    }
+                }
+            });
+
+            // Enhanced Hours Chart with gradient
+            const gradient = ctx2.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
+            gradient.addColorStop(1, 'rgba(16, 185, 129, 0.1)');
+
+            analyticsChart2 = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Hours Worked',
+                        data: data.hours,
+                        backgroundColor: gradient,
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 4,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: 'rgba(16, 185, 129, 1)',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 3,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            display: true,
+                            labels: {
+                                font: { size: 12, weight: 'bold' },
+                                color: textColor,
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: tooltipBg,
+                            titleColor: textColor,
+                            bodyColor: textColor,
+                            borderColor: tooltipBorder,
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + 'h';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: {
+                                font: { size: 11, weight: 'bold' },
+                                color: textColor,
+                                callback: function(value) {
+                                    return value >= 1000 ? (value / 1000).toFixed(1) + 'k h' : value + 'h';
+                                }
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        },
+                        x: { 
+                            ticks: {
+                                font: { size: 11, weight: 'bold' },
+                                color: textColor,
+                                maxRotation: 45
+                            },
+                            grid: { 
+                                display: false 
+                            } 
+                        }
+                    },
+                    layout: {
+                        padding: {
+                            top: 20,
+                            bottom: 20,
+                            left: 20,
+                            right: 20
+                        }
+                    }
+                }
+            });
+        }
+
+        function getSampleAnalyticsData(filter) {
+            if (filter === 'daily') {
+                return {
+                    labels: ['6 AM', '9 AM', '12 PM', '3 PM', '6 PM', '9 PM'],
+                    attendance: [8, 45, 38, 52, 31, 12],
+                    hours: [64, 360, 304, 416, 248, 96]
+                };
+            } else if (filter === 'weekly') {
+                return {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    attendance: [45, 52, 48, 61, 55, 35, 20],
+                    hours: [360, 416, 384, 488, 440, 280, 160]
+                };
+            } else {
+                return {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                    attendance: [450, 520, 480, 610, 550, 470, 590],
+                    hours: [3600, 4160, 3840, 4880, 4400, 3760, 4720]
+                };
+            }
+        }
+    </script>
+</body>
+</html>

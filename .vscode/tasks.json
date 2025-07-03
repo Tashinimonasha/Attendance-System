@@ -1,0 +1,33 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start Attendance System",
+			"type": "shell",
+			"command": "python",
+			"args": [
+				"app.py"
+			],
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": [],
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			}
+		},
+		{
+			"label": "Start Ultra Fast System",
+			"type": "shell",
+			"command": "d:/Printcare/attendance-system/.venv/Scripts/python.exe",
+			"args": [
+				"app_optimized.py"
+			],
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": [],
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			}
+		}
+	]
+}

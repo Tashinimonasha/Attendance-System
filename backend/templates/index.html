@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
+<head>  <meta charset="UTF-8" />
   <title>Attendance OCR - Printcare</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <style>
     body {
       background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1470&q=80') no-repeat center center fixed;
@@ -19,101 +19,214 @@
   </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-white font-sans">
-
   <h1 class="text-6xl font-extrabold mb-12 text-center drop-shadow-lg">
     Welcome to <span class="text-yellow-400">Printcare</span>
   </h1>
-
-  <div class="bg-white bg-opacity-95 text-gray-900 rounded-3xl shadow-2xl p-10 max-w-3xl w-full">
-    <h2 class="text-4xl font-bold mb-8 text-center text-blue-900">
-      Scan Your ID
-    </h2>
-
-    <div class="flex justify-center gap-8 mb-6">
-      <button id="btnIn" class="px-10 py-4 bg-green-600 hover:bg-green-700 rounded-lg text-white font-bold text-xl">
-        IN
-      </button>
-      <button id="btnOut" class="px-10 py-4 bg-red-600 hover:bg-red-700 rounded-lg text-white font-bold text-xl">
-        OUT
-      </button>
-    </div>
-
+  
+  <!-- Flash Messages for Logout Success -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        {% if category == 'success' %}
+          <div id="logoutMessage" class="mb-6 bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-xl shadow-lg flex items-center justify-center max-w-md">
+            <i class="fas fa-check-circle mr-2"></i>
+            {{ message }}
+            <button onclick="closeLogoutMessage()" class="ml-4 text-green-500 hover:text-green-700">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  
+  <!-- Admin Dashboard Link -->
+  <div class="mb-6">
+    <a href="/admin" class="bg-gray-800 bg-opacity-70 hover:bg-opacity-90 text-white px-6 py-3 rounded-xl font-semibold transition duration-200 shadow-lg">
+      🔧 Admin Dashboard
+    </a>
+  </div>
+  
+  <div class="bg-white bg-opacity-95 text-gray-900 rounded-3xl shadow-2xl p-10 max-w-4xl w-full">
+      <!-- Step 1: Main IN/OUT buttons -->
+    <div id="mainButtons" class="flex flex-col items-center gap-8 mb-8">
+      <!-- Company Selection -->
+      <div class="flex flex-col items-center space-y-4">
+        <label for="company" class="text-2xl font-bold text-gray-700">Select Your Company:</label>
+        <select name="company" id="company" class="px-6 py-3 text-xl font-semibold border-2 border-gray-300 rounded-xl bg-white shadow-lg focus:outline-none focus:border-blue-500">
+          <option value="">-- Select Company --</option>
+          <option value="PLC">PLC</option>
+          <option value="PUL">PUL</option>
+          <option value="PPM">PPM</option>
+        </select>
+      </div>
+  
+      
+      <!-- IN/OUT Buttons -->
+      <div class="flex justify-center gap-12">
+        <button id="btnIn" class="px-20 py-8 bg-green-600 hover:bg-green-700 rounded-2xl text-white font-bold text-4xl shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          ✅ IN
+        </button>
+        <button id="btnOut" class="px-20 py-8 bg-red-600 hover:bg-red-700 rounded-2xl text-white font-bold text-4xl shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          ❌ OUT
+        </button>
+      </div>
+    </div>    <!-- Step 2: Enhanced Camera scanning -->
     <div id="cameraContainer" class="flex flex-col items-center space-y-4 hidden">
-      <video id="video" autoplay playsinline class="rounded-lg shadow w-full max-w-md"></video>
-      <p class="text-sm text-gray-600">Hold your ID card steady in front of the camera</p>
+      <h3 id="scanTitle" class="text-2xl font-bold text-center mb-4">🔍 Fast Scanning for IN</h3>
+      <div class="relative">
+        <video id="video" autoplay playsinline class="rounded-lg shadow w-full max-w-md border-4 border-blue-400"></video>
+        <!-- Scanning overlay -->
+        <div class="absolute inset-0 border-4 border-green-400 rounded-lg animate-pulse opacity-75 pointer-events-none"></div>
+        <!-- Scanning guide lines -->
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-40 border-2 border-yellow-400 rounded-lg pointer-events-none">
+          <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-yellow-400"></div>
+          <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-yellow-400"></div>
+          <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-yellow-400"></div>
+          <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-yellow-400"></div>
+        </div>
+      </div>      <div class="text-center">        <p class="text-sm text-gray-600 font-semibold">📷 Position ID card within the yellow frame</p>
+        <p class="text-xs text-green-600">⚡ FAST scanning - Quick NIC detection!</p>
+      </div>
+      <div class="flex gap-4">
+        <button id="manualEntryBtn" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-semibold shadow-lg">
+          ⌨️ Manual Entry
+        </button>
+        <button id="cancelScanBtn" class="px-6 py-3 bg-gray-500 hover:bg-gray-600 rounded-lg text-white font-semibold shadow-lg">
+          ❌ Cancel
+        </button>
+      </div>
     </div>
 
+    <!-- Step 3: Manual NIC entry -->
+    <div id="manualEntryContainer" class="hidden flex flex-col items-center space-y-4">
+      <h3 id="manualTitle" class="text-2xl font-bold text-center mb-4">Enter NIC for IN</h3>
+      <input type="text" id="manualNic" placeholder="Enter NIC (e.g., 123456789V)" 
+             class="px-4 py-3 border-2 rounded-lg text-center text-lg font-mono tracking-wider w-80" maxlength="12">
+      <div class="flex gap-4">
+        <button id="confirmManualBtn" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold">
+          Confirm NIC
+        </button>
+        <button id="cancelManualBtn" class="px-8 py-3 bg-gray-500 hover:bg-gray-600 rounded-lg text-white font-semibold">
+          Cancel
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 4: NIC verification and submission -->
+    <div id="verificationContainer" class="hidden flex flex-col items-center space-y-6">
+      <h3 id="verifyTitle" class="text-2xl font-bold text-center">Verify NIC for IN</h3>
+      
+      <div class="bg-gray-100 p-6 rounded-lg border-2 border-blue-300">
+        <p class="text-lg font-semibold text-gray-700 mb-2">Scanned NIC:</p>
+        <p id="scannedNic" class="text-3xl font-mono font-bold text-blue-600 tracking-wider text-center"></p>
+      </div>
+      
+      <p class="text-lg text-center text-gray-700">Is this NIC correct?</p>
+      
+      <div class="flex gap-6">
+        <button id="submitBtn" class="px-12 py-4 bg-green-600 hover:bg-green-700 rounded-xl text-white font-bold text-xl shadow-lg">
+          ✅ Yes, Submit
+        </button>
+        <button id="editNicBtn" class="px-12 py-4 bg-orange-500 hover:bg-orange-600 rounded-xl text-white font-bold text-xl shadow-lg">
+          ✏️ Edit NIC
+        </button>
+        <button id="rescanBtn" class="px-12 py-4 bg-blue-500 hover:bg-blue-600 rounded-xl text-white font-bold text-xl shadow-lg">
+          📷 Rescan
+        </button>
+      </div>
+    </div>    <!-- Step 5: Success message -->
+    <div id="successContainer" class="hidden flex flex-col items-center space-y-4">
+      <div class="text-center">
+        <div class="text-6xl mb-4">🎉</div>
+        <h3 class="text-2xl font-bold text-green-600 mb-4">Success!</h3>
+        <p id="successMessage" class="text-xl text-gray-700 mb-6"></p>
+        <div class="bg-gray-100 p-4 rounded-lg">
+          <p class="text-sm text-gray-600">NIC: <span id="finalNic" class="font-mono font-bold"></span></p>
+          <p class="text-sm text-gray-600">Company: <span id="finalCompany" class="font-bold"></span></p>
+          <p class="text-sm text-gray-600">Time: <span id="finalTime" class="font-bold"></span></p>
+          <p id="workHoursDisplay" class="text-sm text-gray-600 hidden">Work Hours: <span id="finalWorkHours" class="font-bold"></span></p>
+        </div>
+      </div>
+      <button id="newEntryBtn" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold">
+        New Entry
+      </button>
+    </div>
+
+    <!-- Messages -->
     <div id="message" class="mt-8 text-center text-lg font-semibold min-h-[3rem]"></div>
   </div>
-
-  <script>
+  <script>    // DOM elements
+    const mainButtons = document.getElementById('mainButtons');
     const btnIn = document.getElementById('btnIn');
     const btnOut = document.getElementById('btnOut');
-    const video = document.getElementById('video');
+    const companySelect = document.getElementById('company');
+    
     const cameraContainer = document.getElementById('cameraContainer');
-    const messageDiv = document.getElementById('message');
-
+    const scanTitle = document.getElementById('scanTitle');
+    const video = document.getElementById('video');
+    const manualEntryBtn = document.getElementById('manualEntryBtn');
+    const cancelScanBtn = document.getElementById('cancelScanBtn');
+    
+    const manualEntryContainer = document.getElementById('manualEntryContainer');
+    const manualTitle = document.getElementById('manualTitle');
+    const manualNic = document.getElementById('manualNic');
+    const confirmManualBtn = document.getElementById('confirmManualBtn');
+    const cancelManualBtn = document.getElementById('cancelManualBtn');
+    
+    const verificationContainer = document.getElementById('verificationContainer');
+    const verifyTitle = document.getElementById('verifyTitle');
+    const scannedNic = document.getElementById('scannedNic');
+    const submitBtn = document.getElementById('submitBtn');
+    const editNicBtn = document.getElementById('editNicBtn');
+    const rescanBtn = document.getElementById('rescanBtn');
+      const successContainer = document.getElementById('successContainer');
+    const successMessage = document.getElementById('successMessage');
+    const finalNic = document.getElementById('finalNic');
+    const finalCompany = document.getElementById('finalCompany');
+    const finalTime = document.getElementById('finalTime');
+    const finalWorkHours = document.getElementById('finalWorkHours');
+    const workHoursDisplay = document.getElementById('workHoursDisplay');
+    const newEntryBtn = document.getElementById('newEntryBtn');
+    
+    const messageDiv = document.getElementById('message');    // State variables
     let stream = null;
     let intervalId = null;
     let currentAction = null;
-    let scanning = false;
-
-    async function startCamera(action) {
-      currentAction = action;
-      cameraContainer.classList.remove('hidden');
-      messageDiv.textContent = 'Starting camera...';
-
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        video.srcObject = stream;
-        scanning = true;
-        messageDiv.textContent = 'Scanning for ID...';
-
-        // Auto scan every 1.5 seconds
-        intervalId = setInterval(captureAndSendFrame, 1500);
-
-      } catch (error) {
-        messageDiv.textContent = 'Camera access denied: ' + error.message;
-        messageDiv.classList.add('text-red-700');
+    let currentNic = null;
+    let currentCompany = null;
+    let scanning = false;    // Company selection logic
+    companySelect.addEventListener('change', function() {
+      const selectedCompany = this.value;      if (selectedCompany) {
+        btnIn.disabled = false;
+        btnOut.disabled = false;
+        btnIn.classList.remove('opacity-50', 'cursor-not-allowed');
+        btnOut.classList.remove('opacity-50', 'cursor-not-allowed');
+        currentCompany = selectedCompany;
+      } else {
+        btnIn.disabled = true;
+        btnOut.disabled = true;
+        btnIn.classList.add('opacity-50', 'cursor-not-allowed');
+        btnOut.classList.add('opacity-50', 'cursor-not-allowed');
+        currentCompany = null;
       }
+    });
+
+    // Utility functions
+    function hideAllContainers() {
+      mainButtons.classList.add('hidden');
+      cameraContainer.classList.add('hidden');
+      manualEntryContainer.classList.add('hidden');
+      verificationContainer.classList.add('hidden');
+      successContainer.classList.add('hidden');
+      messageDiv.textContent = '';
+      messageDiv.className = 'mt-8 text-center text-lg font-semibold min-h-[3rem]';
     }
 
-    async function captureAndSendFrame() {
-      if (!video.videoWidth || !scanning) return;
-
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      canvas.toBlob(async (blob) => {
-        const formData = new FormData();
-        formData.append('id_card', blob, 'frame.jpg');
-        formData.append('action', currentAction);
-
-        try {
-          const res = await fetch('/upload', {
-            method: 'POST',
-            body: formData
-          });
-
-          const data = await res.json();
-
-          if (res.ok) {
-            stopCamera();
-            messageDiv.textContent = data.message || (currentAction.toUpperCase() + ' recorded successfully!');
-            messageDiv.classList.add('text-green-700');
-          } else {
-            console.log('Not detected:', data.message);
-          }
-        } catch (err) {
-          console.error(err);
-          messageDiv.textContent = 'Error connecting to server.';
-          messageDiv.classList.add('text-red-700');
-          stopCamera();
-        }
-      }, 'image/jpeg', 0.9);
+    function showMessage(text, type = 'info') {
+      messageDiv.textContent = text;
+      const colorClass = type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-blue-600';
+      messageDiv.className = `mt-8 text-center text-lg font-semibold ${colorClass} min-h-[3rem]`;
     }
 
     function stopCamera() {
@@ -121,12 +234,262 @@
       if (intervalId) clearInterval(intervalId);
       if (stream) stream.getTracks().forEach(track => track.stop());
       video.srcObject = null;
-      cameraContainer.classList.add('hidden');
     }
 
-    btnIn.addEventListener('click', () => startCamera('in'));
-    btnOut.addEventListener('click', () => startCamera('out'));
-  </script>
+    function resetToMainPage() {
+      stopCamera();
+      hideAllContainers();
+      mainButtons.classList.remove('hidden');
+      currentAction = null;
+      currentNic = null;
+      currentCompany = null;
+      manualNic.value = '';      companySelect.value = '';
+      btnIn.disabled = true;
+      btnOut.disabled = true;
+      btnIn.classList.add('opacity-50', 'cursor-not-allowed');
+      btnOut.classList.add('opacity-50', 'cursor-not-allowed');
+    }    // Step 1: Main button handlers
+    btnIn.addEventListener('click', () => startScanning('in'));
+    btnOut.addEventListener('click', () => startScanning('out'));
 
+    // Step 2: Start camera scanning
+    async function startScanning(action) {
+      currentAction = action;
+      scanAttempts = 0; // Reset scan attempts
+      hideAllContainers();
+      cameraContainer.classList.remove('hidden');
+      
+      scanTitle.textContent = `Scanning for ${action.toUpperCase()}`;
+      scanTitle.className = `text-2xl font-bold text-center mb-4 ${action === 'in' ? 'text-green-600' : 'text-red-600'}`;
+      
+      showMessage('Starting camera...', 'info');      try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 }
+          } 
+        });
+        video.srcObject = stream;
+        scanning = true;        showMessage(`⚡ FAST SCANNING for ${action.toUpperCase()}... Hold ID card steady in yellow frame`, action === 'in' ? 'success' : 'error');
+
+        // FAST scanning - every 300ms for quick detection
+        intervalId = setInterval(captureAndScan, 300);
+        
+        // Start scanning quickly
+        setTimeout(captureAndScan, 100);
+
+      } catch (error) {
+        showMessage('Camera access denied: ' + error.message, 'error');
+        resetToMainPage();
+      }
+    }    // Enhanced capture frame and send for scanning
+    let scanAttempts = 0;
+    async function captureAndScan() {
+      if (!video.videoWidth || !scanning) return;      scanAttempts++;
+      showMessage(`⚡ SCAN ${scanAttempts}... ${currentAction.toUpperCase()} mode - Hold ID steady!`, 'info');
+
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      
+      // Enhanced image capture with better quality
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append('id_card', blob, `scan_${Date.now()}.jpg`);
+
+        try {          const res = await fetch('/scan', {
+            method: 'POST',
+            body: formData,
+            // FAST timeout for quick response
+            signal: AbortSignal.timeout(5000)  // 5 seconds for fast extraction
+          });
+
+          const data = await res.json();
+
+          if (res.ok && data.success) {
+            stopCamera();
+            currentNic = data.nic;
+            showMessage(`✅ NIC detected: ${data.nic} (${data.extraction_time}s)`, 'success');
+            showVerification();
+          } else {
+            console.log(`❌ Scan ${scanAttempts}: ${data.message}`);
+            
+            // Simple feedback for fast scanning
+            if (scanAttempts >= 10) {
+              showMessage('🤔 Having trouble? Try manual entry or better lighting.', 'info');
+            } else {
+              showMessage(`🔍 Scanning... Attempt ${scanAttempts}`, 'info');
+            }
+          }        } catch (err) {
+          console.error('Scan error:', err);
+          if (err.name === 'TimeoutError') {
+            showMessage(`⏱️ Processing timeout - trying again...`, 'info');
+          } else {
+            showMessage(`🔄 Network issue - retrying scan...`, 'info');
+          }
+        }
+      }, 'image/jpeg', 0.95);  // Higher quality JPEG
+    }
+
+    // Camera control buttons
+    manualEntryBtn.addEventListener('click', () => {
+      stopCamera();
+      hideAllContainers();
+      manualEntryContainer.classList.remove('hidden');
+      manualTitle.textContent = `Enter NIC for ${currentAction.toUpperCase()}`;
+      manualTitle.className = `text-2xl font-bold text-center mb-4 ${currentAction === 'in' ? 'text-green-600' : 'text-red-600'}`;
+      manualNic.focus();
+    });
+
+    cancelScanBtn.addEventListener('click', resetToMainPage);
+
+    // Step 3: Manual NIC entry
+    confirmManualBtn.addEventListener('click', () => {
+      const nic = manualNic.value.trim().toUpperCase();
+      if (!nic) {
+        showMessage('Please enter a valid NIC.', 'error');
+        return;
+      }
+      
+      // Validate NIC format
+      if (!/^\d{9}[VX]$|^\d{12}$/.test(nic)) {
+        showMessage('Invalid NIC format. Please enter a valid NIC (e.g., 123456789V)', 'error');
+        return;
+      }
+      
+      currentNic = nic;
+      showVerification();
+    });
+
+    cancelManualBtn.addEventListener('click', () => {
+      manualNic.value = '';
+      startScanning(currentAction);
+    });
+
+    // Allow Enter key in manual input
+    manualNic.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        confirmManualBtn.click();
+      }
+    });    // Step 4: Show verification
+    function showVerification() {
+      hideAllContainers();
+      verificationContainer.classList.remove('hidden');
+      
+      verifyTitle.textContent = `Verify NIC for ${currentAction.toUpperCase()}`;
+      verifyTitle.className = `text-2xl font-bold text-center ${currentAction === 'in' ? 'text-green-600' : 'text-red-600'}`;
+      showMessage('Please verify the NIC is correct before submitting.', 'info');
+      
+      scannedNic.textContent = currentNic;
+    }    // Verification button handlers
+    submitBtn.addEventListener('click', async () => {
+      showMessage('Submitting to database...', 'info');
+      
+      try {
+        const res = await fetch('/record_attendance', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: currentAction.toUpperCase(),
+            nic: currentNic,
+            company: currentCompany
+          })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.status === 'success') {
+          showSuccess({
+            success: true,
+            message: data.message,
+            nic: currentNic,
+            company: currentCompany,
+            time: data.time,
+            work_hours: data.work_hours
+          });
+        } else {
+          showMessage(data.message || 'Submission failed.', data.status === 'warning' ? 'info' : 'error');
+        }
+      } catch (err) {
+        console.error('Submit error:', err);
+        showMessage('Error connecting to server.', 'error');
+      }
+    });
+
+    editNicBtn.addEventListener('click', () => {
+      hideAllContainers();
+      manualEntryContainer.classList.remove('hidden');
+      manualTitle.textContent = `Edit NIC for ${currentAction.toUpperCase()}`;
+      manualTitle.className = `text-2xl font-bold text-center mb-4 ${currentAction === 'in' ? 'text-green-600' : 'text-red-600'}`;
+      manualNic.value = currentNic;
+      manualNic.focus();
+      manualNic.select();
+    });    rescanBtn.addEventListener('click', () => {
+      currentNic = null;
+      startScanning(currentAction);
+    });
+
+    // Step 5: Show success
+    function showSuccess(data) {
+      hideAllContainers();
+      successContainer.classList.remove('hidden');
+      
+      successMessage.textContent = data.message;
+      finalNic.textContent = data.nic;
+      finalCompany.textContent = data.company;
+      finalTime.textContent = data.time;
+      
+      // Show work hours for OUT actions
+      if (data.work_hours) {
+        finalWorkHours.textContent = data.work_hours;
+        workHoursDisplay.classList.remove('hidden');
+      } else {
+        workHoursDisplay.classList.add('hidden');
+      }
+      
+      // Auto return to main page after 8 seconds
+      setTimeout(() => {
+        resetToMainPage();
+      }, 8000);
+    }
+
+    newEntryBtn.addEventListener('click', resetToMainPage);
+
+    // Close logout message
+    function closeLogoutMessage() {
+      const logoutMessage = document.getElementById('logoutMessage');
+      if (logoutMessage) {
+        logoutMessage.style.transition = 'opacity 0.3s ease-out';
+        logoutMessage.style.opacity = '0';
+        setTimeout(function() {
+          logoutMessage.remove();
+        }, 300);
+      }
+    }
+
+    // Auto-hide logout message after 5 seconds
+    document.addEventListener('DOMContentLoaded', function() {
+      const logoutMessage = document.getElementById('logoutMessage');
+      if (logoutMessage) {
+        setTimeout(function() {
+          logoutMessage.style.transition = 'opacity 0.5s ease-out';
+          logoutMessage.style.opacity = '0';
+          setTimeout(function() {
+            logoutMessage.remove();
+          }, 500);
+        }, 5000);
+      }
+    });
+
+  </script>
 </body>
 </html>
