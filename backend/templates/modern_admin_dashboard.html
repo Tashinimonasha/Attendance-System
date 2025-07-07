@@ -698,9 +698,10 @@
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">NIC Number</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Company</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Last Active</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Total Hours</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Shift</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Status</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Last Date</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Total Records</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Actions</th>
                             </tr>
                         </thead>
@@ -1450,25 +1451,23 @@
             // Department Distribution Pie Chart
             const ctx3 = document.getElementById('departmentChart');
             if (ctx3) {
-                new Chart(ctx3.getContext('2d'), {
+                window.departmentChart = new Chart(ctx3.getContext('2d'), {
                     type: 'doughnut',
                     data: {
-                        labels: ['Production', 'Quality Control', 'Maintenance', 'Administration', 'Security'],
+                        labels: ['PCL', 'PUL', 'PPM', 'PDSL'],
                         datasets: [{
-                            data: [40, 25, 15, 12, 8],
+                            data: [0, 0, 0, 0], // Will be updated with real data
                             backgroundColor: [
                                 'rgba(139, 92, 246, 0.8)',
                                 'rgba(236, 72, 153, 0.8)',
                                 'rgba(6, 182, 212, 0.8)',
-                                'rgba(245, 158, 11, 0.8)',
-                                'rgba(239, 68, 68, 0.8)'
+                                'rgba(245, 158, 11, 0.8)'
                             ],
                             borderColor: [
                                 'rgba(139, 92, 246, 1)',
                                 'rgba(236, 72, 153, 1)',
                                 'rgba(6, 182, 212, 1)',
-                                'rgba(245, 158, 11, 1)',
-                                'rgba(239, 68, 68, 1)'
+                                'rgba(245, 158, 11, 1)'
                             ],
                             borderWidth: 2,
                             hoverOffset: 10,
@@ -1626,7 +1625,7 @@
             
             if (!workers || workers.length === 0) {
                 tbody.innerHTML = `
-                    <tr><td colspan="6" class="px-4 py-8 text-center theme-text">
+                    <tr><td colspan="7" class="px-4 py-8 text-center theme-text">
                         <i class="fas fa-users text-gray-400 mr-2"></i>
                         No workers found in database
                     </td></tr>
@@ -1648,15 +1647,18 @@
             pageWorkers.forEach((worker, index) => {
                 const rowClass = index % 2 === 0 ? 'table-row-even' : 'table-row-odd';
                 const row = `
-                    <tr class="table-row-hover ${rowClass} transition-all duration-200">
+                    <tr class="table-row-hover ${rowClass} transition-all duration-200" 
+                        data-nic="${worker.nic}" data-company="${worker.company}" data-status="${worker.current_status}">
                         <td class="px-4 py-3 whitespace-nowrap text-sm nic-cell">${worker.nic || 'N/A'}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm table-cell">${worker.company || 'N/A'}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm table-cell">${worker.last_active || 'Never'}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm table-cell">${worker.total_hours || 0}h</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm table-cell">${worker.position || 'N/A'}</td>
                         <td class="px-4 py-3 whitespace-nowrap">
-                            <span class="px-3 py-1 text-xs font-bold rounded-full ${getWorkerStatusColor(worker)} shadow-sm">
-                                ${worker.status || 'INACTIVE'}
+                            <span class="px-3 py-1 text-xs font-bold rounded-full ${getWorkerStatusColor(worker.current_status)} shadow-sm">
+                                ${worker.current_status || 'INACTIVE'}
                             </span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm table-cell">${worker.last_active || 'Never'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm table-cell">${worker.total_sessions || 0}</td>
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm">
                             <button onclick="viewWorkerDetails('${worker.nic}')" class="text-blue-600 hover:text-blue-900 mr-2" title="View Details">

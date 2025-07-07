@@ -22,8 +22,70 @@ def setup_database():
         cursor.execute("USE AttendanceDB")
         print("✅ Database 'AttendanceDB' ready")
         
-        # Create attendance table
-        print("Creating attendance table...")
+        # Create AttendanceRecords table (main table for attendance tracking)
+        print("Creating AttendanceRecords table...")
+        create_attendance_records_table = """
+        CREATE TABLE IF NOT EXISTS AttendanceRecords (
+            ID INT AUTO_INCREMENT PRIMARY KEY,
+            NIC VARCHAR(20) NOT NULL,
+            Date DATE NOT NULL,
+            InTime TIME,
+            OutTime TIME,
+            Shift VARCHAR(50) DEFAULT 'Morning',
+            Status VARCHAR(20) DEFAULT 'Present',
+            Company VARCHAR(100) DEFAULT 'Printcare Solutions',
+            CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_nic (NIC),
+            INDEX idx_date (Date),
+            INDEX idx_shift (Shift)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """
+        cursor.execute(create_attendance_records_table)
+        print("✅ AttendanceRecords table ready")
+        
+        # Insert example data as specified
+        print("Adding example attendance records...")
+        example_data = [
+            ('123456789V', '2025-07-04', '06:30:00', '14:30:00', 'Morning', 'Present', 'Printcare Solutions'),
+            ('987654321V', '2025-07-04', '14:45:00', '22:00:00', 'Evening', 'Present', 'Printcare Solutions'),
+            ('123456789V', '2025-07-05', '06:45:00', '14:45:00', 'Morning', 'Present', 'Printcare Solutions'),
+            ('987654321V', '2025-07-05', '14:30:00', '22:30:00', 'Evening', 'Present', 'Printcare Solutions'),
+            ('456789123V', '2025-07-04', '08:00:00', '17:00:00', 'Morning', 'Present', 'Tech Division'),
+            ('456789123V', '2025-07-05', '08:15:00', '17:15:00', 'Morning', 'Present', 'Tech Division'),
+            ('789123456V', '2025-07-04', '22:00:00', '06:00:00', 'Night', 'Present', 'Design Team'),
+            ('789123456V', '2025-07-06', '22:15:00', '06:15:00', 'Night', 'Present', 'Design Team'),
+            ('321654987V', '2025-07-04', '13:00:00', '21:00:00', 'Afternoon', 'Present', 'Operations'),
+            ('321654987V', '2025-07-05', '13:15:00', '21:15:00', 'Afternoon', 'Present', 'Operations')
+        ]
+        
+        # Check if data already exists
+        cursor.execute("SELECT COUNT(*) FROM AttendanceRecords")
+        existing_count = cursor.fetchone()[0]
+        
+        if existing_count == 0:
+            insert_query = """
+            INSERT INTO AttendanceRecords (NIC, Date, InTime, OutTime, Shift, Status, Company)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.executemany(insert_query, example_data)
+            print(f"✅ Added {len(example_data)} example attendance records")
+        else:
+            print(f"⚠️ AttendanceRecords already contains {existing_count} records, skipping example data")
+        
+        # 🧠 Example Values Stored:
+        print("\n🧠 Example Values You Can Store:")
+        print("=" * 50)
+        print("NIC\t\tDate\t\tInTime\t\tOutTime\t\tShift")
+        print("-" * 70)
+        print("123456789V\t2025-07-04\t06:30:00\t14:30:00\tMorning")
+        print("987654321V\t2025-07-04\t14:45:00\t22:00:00\tEvening")
+        print("456789123V\t2025-07-04\t08:00:00\t17:00:00\tMorning")
+        print("789123456V\t2025-07-04\t22:00:00\t06:00:00\tNight")
+        print("321654987V\t2025-07-04\t13:00:00\t21:00:00\tAfternoon")
+        
+        # Create attendance table (legacy support)
+        print("\nCreating legacy attendance table...")
         create_attendance_table = """
         CREATE TABLE IF NOT EXISTS attendance (
             id INT AUTO_INCREMENT PRIMARY KEY,

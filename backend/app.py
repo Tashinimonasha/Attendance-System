@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, make_response
 from werkzeug.utils import secure_filename
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from PIL import Image, ImageEnhance
 import pytesseract
 import re
@@ -21,7 +21,69 @@ UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+def get_shift_from_time(check_time):
+    """
+    Calculate shift based on check-in time
+    
+    Shift Schedule:
+    - Morning Shift: 06:00 AM – 12:00 PM
+    - Afternoon Shift: 12:00 PM – 06:00 PM  
+    - Evening Shift: 06:00 PM – 10:00 PM
+    - Night Shift: 10:00 PM – 06:00 AM (next day)
+    """
+    if isinstance(check_time, str):
+        # Parse time string
+        if ' ' in check_time:
+            check_time = datetime.strptime(check_time, "%Y-%m-%d %H:%M:%S").time()
+        else:
+            check_time = datetime.strptime(check_time, "%H:%M:%S").time()
+    elif isinstance(check_time, datetime):
+        check_time = check_time.time()
+    
+    morning_start = time(6, 0)    # 06:00 AM
+    afternoon_start = time(12, 0) # 12:00 PM
+    evening_start = time(18, 0)   # 06:00 PM
+    night_start = time(22, 0)     # 10:00 PM
+    
+    # Determine shift based on check-in time
+    if morning_start <= check_time < afternoon_start:
+        return "Morning Shift"
+    elif afternoon_start <= check_time < evening_start:
+        return "Afternoon Shift"
+    elif evening_start <= check_time < night_start:
+        return "Evening Shift"
+    else:
+        # Night shift: 10:00 PM - 06:00 AM (covers late night and early morning)
+        return "Night Shift"
+
+app = Flask(__name__)
+app.secret_key = 'printcare_admin_secret_key_2025'
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 # Database connection with error handling
+def get_db_connection():
+    """Get a fresh database connection with error handling"""
+    try:
+        connection = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="Tashini258258",
+            database="AttendanceDB",
+            autocommit=False,
+            charset='utf8mb4',
+            collation='utf8mb4_unicode_ci'
+        )
+        return connection
+    except mysql.connector.Error as err:
+        print(f"❌ Database connection error: {err}")
+        return None
+    except Exception as e:
+        print(f"❌ Unexpected database error: {e}")
+        return None
+
+# Initialize database connection
 try:
     db = mysql.connector.connect(
         host="localhost",
@@ -259,10 +321,29 @@ def record_attendance():
         today = datetime.today().date()
         now = datetime.now().time()
         
+        # Map company names to database ENUM values
+        company_mapping = {
+            'Printcare Solutions': 'PUL',
+            'Tech Division': 'PCL', 
+            'Design Team': 'PPM',
+            'Operations': 'PDSL',
+            'HR Department': 'PUL',
+            'Finance Team': 'PCL',
+            'Marketing': 'PPM',
+            'IT Support': 'PDSL',
+            'Quality Assurance': 'PUL'
+        }
+        
+        # Map the company to database enum value
+        db_company = company_mapping.get(company, 'PUL')  # Default to PUL
+        
         if action == 'IN':
+            # Calculate shift from time
+            shift = get_shift_from_time(now)
+            
             cursor.execute(
-                "INSERT INTO AttendanceRecords (NIC, Date, InTime, Company) VALUES (%s, %s, %s, %s)", 
-                (nic, today, now, company)
+                "INSERT INTO AttendanceRecords (NIC, Date, InTime, Shift, Status, Company) VALUES (%s, %s, %s, %s, %s, %s)", 
+                (nic, today, now, shift, 'Check in', db_company)
             )
             db.commit()
             
@@ -275,7 +356,7 @@ def record_attendance():
         elif action == 'OUT':
             # Find matching IN record
             cursor.execute("""
-                SELECT Id, InTime FROM AttendanceRecords
+                SELECT ID, InTime FROM AttendanceRecords
                 WHERE NIC = %s AND Date = %s AND OutTime IS NULL
                 ORDER BY InTime DESC LIMIT 1
             """, (nic, today))
@@ -289,10 +370,10 @@ def record_attendance():
             
             record_id, in_time = row
             
-            # Update with OUT time
+            # Update with OUT time and status
             cursor.execute(
-                "UPDATE AttendanceRecords SET OutTime = %s WHERE Id = %s", 
-                (now, record_id)
+                "UPDATE AttendanceRecords SET OutTime = %s, Status = %s WHERE ID = %s", 
+                (now, 'Completed', record_id)
             )
             db.commit()
             
@@ -559,11 +640,10 @@ def search_attendance():
         date_query = request.args.get('date', '').strip()
         status_query = request.args.get('status', '').strip()
         
-        # Build dynamic query
+        # Build dynamic query for AttendanceRecords table
         base_query = """
-            SELECT NIC, Company, Date, InTime, OutTime, 
-                   CASE WHEN OutTime IS NULL THEN 'IN' ELSE 'COMPLETED' END as status
-            FROM attendancerecords 
+            SELECT NIC, Company, Date, InTime, OutTime, Shift, Status
+            FROM AttendanceRecords 
             WHERE 1=1
         """
         
@@ -584,8 +664,11 @@ def search_attendance():
         if status_query:
             if status_query == 'IN':
                 base_query += " AND OutTime IS NULL"
-            elif status_query == 'COMPLETED':
+            elif status_query == 'OUT':
                 base_query += " AND OutTime IS NOT NULL"
+            else:
+                base_query += " AND Status = %s"
+                params.append(status_query)
         
         base_query += " ORDER BY Date DESC, InTime DESC LIMIT 100"
         
@@ -600,7 +683,8 @@ def search_attendance():
                 'date': str(record[2]),
                 'in_time': str(record[3]) if record[3] else 'N/A',
                 'out_time': str(record[4]) if record[4] else 'N/A',
-                'status': record[5]
+                'shift': record[5] or 'N/A',
+                'status': record[6]
             })
         
         return jsonify({
@@ -614,7 +698,7 @@ def search_attendance():
 
 @app.route('/admin/api/workers')
 def get_workers():
-    """API endpoint for Workers information"""
+    """API endpoint for Workers information - simplified for attendancerecords table"""
     if 'admin_logged_in' not in session:
         return jsonify({"error": "Unauthorized"}), 401
     
@@ -624,7 +708,7 @@ def get_workers():
             
         cursor = db.cursor()
         
-        # Get all unique workers with their latest data - Fixed SQL for MySQL
+        # Get all unique workers from AttendanceRecords table
         cursor.execute('''
             SELECT 
                 NIC,
@@ -633,10 +717,10 @@ def get_workers():
                 COUNT(*) as total_sessions,
                 CASE 
                     WHEN MAX(Date) = CURDATE() AND COUNT(CASE WHEN OutTime IS NULL THEN 1 END) > 0 THEN 'IN'
-                    WHEN MAX(Date) = CURDATE() AND COUNT(CASE WHEN OutTime IS NOT NULL THEN 1 END) > 0 THEN 'ACTIVE'
+                    WHEN MAX(Date) = CURDATE() AND COUNT(CASE WHEN OutTime IS NOT NULL THEN 1 END) > 0 THEN 'OUT'
                     ELSE 'INACTIVE'
-                END as status
-            FROM attendancerecords 
+                END as current_status
+            FROM AttendanceRecords 
             GROUP BY NIC, Company
             ORDER BY MAX(Date) DESC, NIC
         ''')
@@ -647,10 +731,13 @@ def get_workers():
         for record in records:
             workers_data.append({
                 'nic': record[0] if record[0] else 'N/A',
+                'name': f'Worker {record[0][-3:]}' if record[0] else 'Unknown',  # Generate name from NIC
                 'company': record[1] if record[1] else 'N/A',
+                'position': 'Employee',  # Default position
+                'phone': 'N/A',  # No phone in simple structure
                 'last_active': str(record[2]) if record[2] else 'Never',
-                'total_hours': record[3] if record[3] else 0,  # Using session count
-                'status': record[4] if record[4] else 'INACTIVE'
+                'total_sessions': record[3] if record[3] else 0,
+                'current_status': record[4] if record[4] else 'INACTIVE'
             })
         
         print(f"✅ Workers API: Found {len(workers_data)} workers")
@@ -667,7 +754,7 @@ def get_workers():
 
 @app.route('/admin/api/analytics')
 def get_analytics():
-    """API endpoint for Analytics data"""
+    """API endpoint for Analytics data with updated AttendanceRecords table"""
     if 'admin_logged_in' not in session:
         return jsonify({"error": "Unauthorized"}), 401
     
@@ -675,18 +762,25 @@ def get_analytics():
         filter_type = request.args.get('filter', 'daily')
         date_param = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
         
-        cursor = db.cursor()
+        # Get fresh connection
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+            
+        cursor = connection.cursor(dictionary=True)
         
         if filter_type == 'daily':
             # Daily hourly breakdown
             cursor.execute('''
                 SELECT 
-                    HOUR(in_time) as hour_period,
+                    HOUR(InTime) as hour_period,
                     COUNT(*) as attendance_count,
-                    SUM(COALESCE(workhours, 0)) as total_hours
-                FROM attendancerecords 
-                WHERE date = %s
-                GROUP BY HOUR(in_time)
+                    COUNT(CASE WHEN OutTime IS NOT NULL THEN 1 END) as completed_count,
+                    COUNT(CASE WHEN Status = 'Check in' THEN 1 END) as checkin_count,
+                    COUNT(CASE WHEN Status = 'Completed' THEN 1 END) as completed_status_count
+                FROM `AttendanceRecords`
+                WHERE Date = %s AND InTime IS NOT NULL
+                GROUP BY HOUR(InTime)
                 ORDER BY hour_period
             ''', (date_param,))
             
@@ -694,26 +788,28 @@ def get_analytics():
             # Weekly breakdown (7 days from selected date)
             cursor.execute('''
                 SELECT 
-                    DAYNAME(date) as day_name,
-                    COUNT(DISTINCT nic) as attendance_count,
-                    SUM(COALESCE(workhours, 0)) as total_hours
-                FROM attendancerecords 
-                WHERE date BETWEEN DATE_SUB(%s, INTERVAL 6 DAY) AND %s
-                GROUP BY date, DAYNAME(date)
-                ORDER BY date
+                    DAYNAME(Date) as day_name,
+                    COUNT(DISTINCT NIC) as attendance_count,
+                    COUNT(*) as total_records,
+                    COUNT(CASE WHEN OutTime IS NOT NULL THEN 1 END) as completed_count
+                FROM `AttendanceRecords`
+                WHERE Date BETWEEN DATE_SUB(%s, INTERVAL 6 DAY) AND %s
+                GROUP BY Date, DAYNAME(Date)
+                ORDER BY Date
             ''', (date_param, date_param))
             
         else:  # monthly
             # Monthly breakdown (6 months from selected date)
             cursor.execute('''
                 SELECT 
-                    MONTHNAME(date) as month_name,
-                    COUNT(DISTINCT nic) as attendance_count,
-                    SUM(COALESCE(workhours, 0)) as total_hours
-                FROM attendancerecords 
-                WHERE date BETWEEN DATE_SUB(%s, INTERVAL 5 MONTH) AND %s
-                GROUP BY YEAR(date), MONTH(date), MONTHNAME(date)
-                ORDER BY date
+                    MONTHNAME(Date) as month_name,
+                    COUNT(DISTINCT NIC) as attendance_count,
+                    COUNT(*) as total_records,
+                    COUNT(CASE WHEN OutTime IS NOT NULL THEN 1 END) as completed_count
+                FROM `AttendanceRecords`
+                WHERE Date BETWEEN DATE_SUB(%s, INTERVAL 5 MONTH) AND %s
+                GROUP BY YEAR(Date), MONTH(Date), MONTHNAME(Date)
+                ORDER BY Date
             ''', (date_param, date_param))
         
         results = cursor.fetchall()
@@ -721,30 +817,404 @@ def get_analytics():
         # Format data for charts
         labels = []
         attendance = []
-        hours = []
+        completed = []
         
         for row in results:
             if filter_type == 'daily':
                 labels.append(f"{row['hour_period']:02d}:00")
+                attendance.append(row['attendance_count'])
+                completed.append(row.get('completed_count', 0))
             elif filter_type == 'weekly':
                 labels.append(row['day_name'][:3])
+                attendance.append(row['attendance_count'])
+                completed.append(row.get('completed_count', 0))
             else:
                 labels.append(row['month_name'][:3])
-            
-            attendance.append(row['attendance_count'])
-            hours.append(float(row['total_hours'] or 0))
+                attendance.append(row['attendance_count'])
+                completed.append(row.get('completed_count', 0))
+        
+        # Get department/company distribution
+        cursor.execute('''
+            SELECT 
+                Company,
+                COUNT(DISTINCT NIC) as worker_count,
+                COUNT(*) as total_records
+            FROM `AttendanceRecords`
+            WHERE Date >= DATE_SUB(%s, INTERVAL 30 DAY)
+            GROUP BY Company
+            ORDER BY Company
+        ''', (date_param,))
+        
+        dept_results = cursor.fetchall()
+        
+        # Format department data
+        dept_labels = []
+        dept_data = []
+        
+        for row in dept_results:
+            dept_labels.append(row['Company'])
+            dept_data.append(row['worker_count'])
+        
+        # Ensure all departments are represented
+        all_companies = ['PCL', 'PUL', 'PPM', 'PDSL']
+        dept_labels_complete = []
+        dept_data_complete = []
+        
+        for company in all_companies:
+            if company in dept_labels:
+                idx = dept_labels.index(company)
+                dept_labels_complete.append(company)
+                dept_data_complete.append(dept_data[idx])
+            else:
+                dept_labels_complete.append(company)
+                dept_data_complete.append(0)
         
         return jsonify({
             'success': True,
             'analytics': {
                 'labels': labels,
                 'attendance': attendance,
-                'hours': hours
+                'completed': completed,
+                'departments': {
+                    'labels': dept_labels_complete,
+                    'data': dept_data_complete
+                }
             }
         })
         
     except Exception as e:
+        print(f"❌ Analytics error: {e}")
         return jsonify({'error': 'Database error'}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
+
+# New comprehensive reporting endpoints
+@app.route('/admin/api/reports/daily')
+def daily_report():
+    """Generate daily attendance report"""
+    if 'admin_logged_in' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        date_param = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+        company = request.args.get('company', '')
+        shift = request.args.get('shift', '')
+        
+        # Get fresh connection
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+            
+        cursor = connection.cursor(dictionary=True)
+        
+        # Build query with filters
+        query = """
+        SELECT 
+            NIC, Date, InTime, OutTime, Shift, Status, Company,
+            CASE 
+                WHEN InTime IS NOT NULL AND OutTime IS NOT NULL 
+                THEN TIMEDIFF(OutTime, InTime)
+                ELSE NULL 
+            END as WorkDuration
+        FROM `AttendanceRecords`
+        WHERE Date = %s
+        """
+        params = [date_param]
+        
+        if company:
+            query += " AND Company = %s"
+            params.append(company)
+            
+        if shift:
+            query += " AND Shift = %s"
+            params.append(shift)
+            
+        query += " ORDER BY InTime"
+        
+        cursor.execute(query, params)
+        records = cursor.fetchall()
+        
+        # Calculate summary statistics
+        total_records = len(records)
+        checked_in = len([r for r in records if r['Status'] == 'Check in'])
+        completed = len([r for r in records if r['Status'] == 'Completed'])
+        pending = len([r for r in records if r['Status'] == 'Pending'])
+        
+        # Convert timedelta to string for JSON serialization
+        for record in records:
+            if record['WorkDuration']:
+                record['WorkDuration'] = str(record['WorkDuration'])
+            if record['InTime']:
+                record['InTime'] = str(record['InTime'])
+            if record['OutTime']:
+                record['OutTime'] = str(record['OutTime'])
+        
+        return jsonify({
+            'success': True,
+            'date': date_param,
+            'summary': {
+                'total_records': total_records,
+                'checked_in': checked_in,
+                'completed': completed,
+                'pending': pending
+            },
+            'records': records
+        })
+        
+    except Exception as e:
+        print(f"❌ Daily report error: {e}")
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
+
+@app.route('/admin/api/reports/weekly')
+def weekly_report():
+    """Generate weekly attendance report"""
+    if 'admin_logged_in' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        date_param = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+        company = request.args.get('company', '')
+        
+        # Get fresh connection
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+            
+        cursor = connection.cursor(dictionary=True)
+        
+        # Weekly summary by day
+        query = """
+        SELECT 
+            Date,
+            DAYNAME(Date) as DayName,
+            COUNT(*) as TotalRecords,
+            COUNT(DISTINCT NIC) as UniqueWorkers,
+            COUNT(CASE WHEN Status = 'Check in' THEN 1 END) as CheckedIn,
+            COUNT(CASE WHEN Status = 'Completed' THEN 1 END) as Completed,
+            COUNT(CASE WHEN Status = 'Pending' THEN 1 END) as Pending
+        FROM `AttendanceRecords`
+        WHERE Date BETWEEN DATE_SUB(%s, INTERVAL 6 DAY) AND %s
+        """
+        params = [date_param, date_param]
+        
+        if company:
+            query += " AND Company = %s"
+            params.append(company)
+            
+        query += " GROUP BY Date ORDER BY Date"
+        
+        cursor.execute(query, params)
+        daily_summary = cursor.fetchall()
+        
+        # Convert dates to strings
+        for record in daily_summary:
+            record['Date'] = str(record['Date'])
+        
+        return jsonify({
+            'success': True,
+            'week_ending': date_param,
+            'daily_summary': daily_summary
+        })
+        
+    except Exception as e:
+        print(f"❌ Weekly report error: {e}")
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
+
+@app.route('/admin/api/reports/monthly')
+def monthly_report():
+    """Generate monthly attendance report"""
+    if 'admin_logged_in' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        date_param = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+        company = request.args.get('company', '')
+        
+        # Get fresh connection
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+            
+        cursor = connection.cursor(dictionary=True)
+        
+        # Get the first day of the month
+        date_obj = datetime.strptime(date_param, '%Y-%m-%d')
+        first_day = date_obj.replace(day=1).strftime('%Y-%m-%d')
+        last_day = (date_obj.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        last_day = last_day.strftime('%Y-%m-%d')
+        
+        # Monthly summary by company and shift
+        query = """
+        SELECT 
+            Company,
+            Shift,
+            COUNT(*) as TotalRecords,
+            COUNT(DISTINCT NIC) as UniqueWorkers,
+            COUNT(CASE WHEN Status = 'Check in' THEN 1 END) as CheckedIn,
+            COUNT(CASE WHEN Status = 'Completed' THEN 1 END) as Completed,
+            COUNT(CASE WHEN Status = 'Pending' THEN 1 END) as Pending,
+            AVG(CASE 
+                WHEN InTime IS NOT NULL AND OutTime IS NOT NULL 
+                THEN TIME_TO_SEC(TIMEDIFF(OutTime, InTime))/3600 
+                ELSE NULL 
+            END) as AvgWorkHours
+        FROM `AttendanceRecords`
+        WHERE Date BETWEEN %s AND %s
+        """
+        params = [first_day, last_day]
+        
+        if company:
+            query += " AND Company = %s"
+            params.append(company)
+            
+        query += " GROUP BY Company, Shift ORDER BY Company, Shift"
+        
+        cursor.execute(query, params)
+        company_summary = cursor.fetchall()
+        
+        # Round average work hours
+        for record in company_summary:
+            if record['AvgWorkHours']:
+                record['AvgWorkHours'] = round(record['AvgWorkHours'], 2)
+        
+        return jsonify({
+            'success': True,
+            'month': date_obj.strftime('%B %Y'),
+            'period': f"{first_day} to {last_day}",
+            'company_summary': company_summary
+        })
+        
+    except Exception as e:
+        print(f"❌ Monthly report error: {e}")
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
+
+@app.route('/admin/api/export/excel')
+def export_excel():
+    """Export attendance data to Excel"""
+    if 'admin_logged_in' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        report_type = request.args.get('type', 'daily')
+        date_param = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+        company = request.args.get('company', '')
+        
+        # Get fresh connection
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+            
+        cursor = connection.cursor(dictionary=True)
+        
+        if report_type == 'daily':
+            query = """
+            SELECT 
+                NIC, Date, InTime, OutTime, Shift, Status, Company,
+                CASE 
+                    WHEN InTime IS NOT NULL AND OutTime IS NOT NULL 
+                    THEN TIMEDIFF(OutTime, InTime)
+                    ELSE NULL 
+                END as WorkDuration
+            FROM `AttendanceRecords`
+            WHERE Date = %s
+            """
+            params = [date_param]
+            filename = f"daily_report_{date_param}.xlsx"
+            
+        elif report_type == 'weekly':
+            query = """
+            SELECT 
+                Date, NIC, InTime, OutTime, Shift, Status, Company
+            FROM `AttendanceRecords`
+            WHERE Date BETWEEN DATE_SUB(%s, INTERVAL 6 DAY) AND %s
+            """
+            params = [date_param, date_param]
+            filename = f"weekly_report_{date_param}.xlsx"
+            
+        else:  # monthly
+            date_obj = datetime.strptime(date_param, '%Y-%m-%d')
+            first_day = date_obj.replace(day=1).strftime('%Y-%m-%d')
+            last_day = (date_obj.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+            last_day = last_day.strftime('%Y-%m-%d')
+            
+            query = """
+            SELECT 
+                Date, NIC, InTime, OutTime, Shift, Status, Company
+            FROM `AttendanceRecords`
+            WHERE Date BETWEEN %s AND %s
+            """
+            params = [first_day, last_day]
+            filename = f"monthly_report_{date_obj.strftime('%Y-%m')}.xlsx"
+            
+        if company:
+            query += " AND Company = %s"
+            params.append(company)
+            
+        query += " ORDER BY Date, InTime"
+        
+        cursor.execute(query, params)
+        records = cursor.fetchall()
+        
+        # Create Excel file
+        import openpyxl
+        from openpyxl.utils.dataframe import dataframe_to_rows
+        import pandas as pd
+        from io import BytesIO
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(records)
+        
+        # Create workbook and worksheet
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = f"{report_type.capitalize()} Report"
+        
+        # Add data to worksheet
+        for r in dataframe_to_rows(df, index=False, header=True):
+            ws.append(r)
+        
+        # Style the header
+        for cell in ws[1]:
+            cell.font = openpyxl.styles.Font(bold=True)
+            cell.fill = openpyxl.styles.PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+        
+        # Save to BytesIO
+        excel_file = BytesIO()
+        wb.save(excel_file)
+        excel_file.seek(0)
+        
+        response = make_response(excel_file.getvalue())
+        response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        
+        return response
+        
+    except Exception as e:
+        print(f"❌ Excel export error: {e}")
+        return jsonify({'error': f'Export error: {str(e)}'}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
 
 @app.route('/admin/api/export-worker')
 def export_worker():
