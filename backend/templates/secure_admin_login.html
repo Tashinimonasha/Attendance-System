@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Printcare Admin Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center">
+    <div class="absolute inset-0 bg-black opacity-20"></div>
+    
+    <!-- Login Container -->
+    <div class="relative z-10 w-full max-w-md mx-4">
+        <!-- Logo Section -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-lg mb-4">
+                <i class="fas fa-shield-alt text-3xl text-blue-600"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">PRINTCARE</h1>
+            <p class="text-white opacity-80">Admin Access Portal</p>
+        </div>
+
+        <!-- Login Form -->
+        <div class="glass-effect rounded-2xl p-8 shadow-2xl">
+            <form method="POST" action="/admin/login" id="loginForm">
+                <div class="mb-6">
+                    <label for="username" class="block text-white text-sm font-semibold mb-2">
+                        <i class="fas fa-user mr-2"></i>
+                        Username
+                    </label>
+                    <input type="text" 
+                           name="username" 
+                           id="username" 
+                           required 
+                           autocomplete="username"
+                           class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent backdrop-blur-sm"
+                           placeholder="Enter your username">
+                </div>
+
+                <div class="mb-6">
+                    <label for="password" class="block text-white text-sm font-semibold mb-2">
+                        <i class="fas fa-lock mr-2"></i>
+                        Password
+                    </label>
+                    <div class="relative">
+                        <input type="password" 
+                               name="password" 
+                               id="password" 
+                               required 
+                               autocomplete="current-password"
+                               class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent backdrop-blur-sm pr-12"
+                               placeholder="Enter your password">
+                        <button type="button" onclick="togglePassword()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white">
+                            <i id="passwordIcon" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Security Features -->
+                <div class="mb-6">
+                    <div class="flex items-center text-white/80 text-sm">
+                        <i class="fas fa-shield-check mr-2 text-green-400"></i>
+                        Secure authentication enabled
+                    </div>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="mb-4 p-3 rounded-lg {% if category == 'error' %}bg-red-500/20 border border-red-400 text-red-100{% else %}bg-green-500/20 border border-green-400 text-green-100{% endif %}">
+                                <i class="fas {% if category == 'error' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %} mr-2"></i>
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Remember Me -->
+                <div class="mb-4">
+                    <label class="flex items-center text-white/80 text-sm">
+                        <input type="checkbox" id="rememberMe" class="mr-2 rounded bg-white/20 border-white/30 text-blue-600 focus:ring-blue-500 focus:ring-2">
+                        <i class="fas fa-clock mr-2"></i>
+                        Remember me for 8 hours
+                    </label>
+                </div>
+
+                <button type="submit" 
+                        class="w-full bg-white text-gray-800 font-semibold py-3 px-4 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all duration-200 transform hover:scale-105">
+                    <i class="fas fa-sign-in-alt mr-2"></i>
+                    Secure Login
+                </button>
+            </form>
+
+            <!-- Security Notice -->
+            <div class="mt-6 text-center">
+                <p class="text-white/60 text-xs">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Authorized personnel only. All access attempts are logged.
+                </p>
+            </div>
+        </div>
+
+        <!-- Back to Main App -->
+        <div class="text-center mt-6">
+            <a href="/" class="text-white/80 hover:text-white text-sm transition-colors duration-200">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to Attendance System
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Password visibility toggle
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const passwordIcon = document.getElementById('passwordIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                passwordIcon.className = 'fas fa-eye-slash';
+            } else {
+                passwordInput.type = 'password';
+                passwordIcon.className = 'fas fa-eye';
+            }
+        }
+
+        // Form validation and security
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                e.preventDefault();
+                alert('Please enter both username and password.');
+                return false;
+            }
+            
+            // Add loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Authenticating...';
+            submitBtn.disabled = true;
+        });
+
+        // Auto-focus username field
+        document.getElementById('username').focus();
+
+        // Auto-fill saved credentials
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedUsername = localStorage.getItem('adminUsername');
+            const savedPassword = localStorage.getItem('adminPassword');
+            
+            if (savedUsername && savedPassword) {
+                document.getElementById('username').value = savedUsername;
+                document.getElementById('password').value = savedPassword;
+                document.getElementById('rememberMe').checked = true;
+            }
+        });
+
+        // Save credentials if remember me is checked
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            
+            if (!username || !password) {
+                e.preventDefault();
+                alert('Please enter both username and password.');
+                return false;
+            }
+            
+            // Save or clear credentials
+            if (rememberMe) {
+                localStorage.setItem('adminUsername', username);
+                localStorage.setItem('adminPassword', password);
+            } else {
+                localStorage.removeItem('adminUsername');
+                localStorage.removeItem('adminPassword');
+            }
+            
+            // Add loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Authenticating...';
+            submitBtn.disabled = true;
+        });
+
+        // Prevent right-click and dev tools (basic security)
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
