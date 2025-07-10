@@ -11,7 +11,7 @@ try:
     db = mysql.connector.connect(
         host="localhost",
         user="root",
-        password="",  # Update with your MySQL password
+        password="Tashini258258",  # Update with your MySQL password
         database="attendance_system"
     )
     cursor = db.cursor()

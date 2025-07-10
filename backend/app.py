@@ -15,6 +15,367 @@ import logging
 # Set Tesseract path
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
+# Database initialization function
+def initialize_database():
+    """Initialize database and create tables if they don't exist"""
+    try:
+        # Connect to MySQL server (without selecting a database)
+        connection = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="Tashini258258"
+        )
+        cursor = connection.cursor()
+        
+        # Create database if it doesn't exist
+        cursor.execute("CREATE DATABASE IF NOT EXISTS AttendanceDB")
+        cursor.execute("USE AttendanceDB")
+        
+        # Create AttendanceRecords table
+        attendance_table = """
+        CREATE TABLE IF NOT EXISTS `AttendanceRecords` (
+            ID INT AUTO_INCREMENT PRIMARY KEY,
+            NIC VARCHAR(20) NOT NULL,
+            Date DATE NOT NULL,
+            InTime TIME,
+            OutTime TIME,
+            Shift VARCHAR(50) DEFAULT 'Morning Shift',
+            Status ENUM('Check in', 'Completed', 'Pending') DEFAULT 'Check in',
+            Company ENUM('PUL', 'PCL', 'PPM', 'PDSL') DEFAULT 'PUL',
+            FrontNICImage VARCHAR(255),
+            BackNICImage VARCHAR(255),
+            CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_nic (NIC),
+            INDEX idx_date (Date),
+            INDEX idx_shift (Shift),
+            INDEX idx_company (Company),
+            INDEX idx_status (Status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """
+        cursor.execute(attendance_table)
+        
+        # Create admin_users table for admin authentication
+        admin_table = """
+        CREATE TABLE IF NOT EXISTS `admin_users` (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            password VARCHAR(64) NOT NULL,
+            full_name VARCHAR(100),
+            email VARCHAR(100),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """
+        cursor.execute(admin_table)
+        
+        # Create default admin user if it doesn't exist
+        default_password = "printcare2025"
+        hashed_password = hashlib.sha256(default_password.encode()).hexdigest()
+        
+        cursor.execute("""
+            INSERT IGNORE INTO admin_users (username, password, full_name, email)
+            VALUES (%s, %s, %s, %s)
+        """, ('admin', hashed_password, 'System Administrator', 'admin@printcare.com'))
+        
+        connection.commit()
+        cursor.close()
+        connection.close()
+        
+        print("✅ Database and tables initialized successfully")
+        print("📋 Default admin credentials:")
+        print("   Username: admin")
+        print("   Password: printcare2025")
+        
+        return True
+        
+    except mysql.connector.Error as err:
+        print(f"❌ Database initialization error: {err}")
+        return False
+    except Exception as e:
+        print(f"❌ Unexpected error during database initialization: {e}")
+        return False
+
+# Initialize database on startup
+initialize_database()
+
+def populate_sample_data():
+    """Populate database with comprehensive sample attendance data until today"""
+    try:
+        from datetime import datetime, timedelta
+        import random
+        
+        # Connect to database
+        connection = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="Tashini258258",
+            database="AttendanceDB"
+        )
+        cursor = connection.cursor()
+        
+        # Check what's the latest date in the database
+        cursor.execute("SELECT MAX(Date) FROM AttendanceRecords")
+        latest_date_result = cursor.fetchone()[0]
+        
+        today = datetime.now().date()
+        
+        if latest_date_result:
+            latest_date = latest_date_result
+            if latest_date >= today:
+                print(f"✅ Database is up to date (latest record: {latest_date})")
+                cursor.close()
+                connection.close()
+                return
+            else:
+                # Start from the day after the latest record
+                start_date = datetime.combine(latest_date + timedelta(days=1), datetime.min.time())
+                print(f"📅 Filling in missing attendance data from {start_date.date()} to {today}...")
+        else:
+            # No data exists, start from May 1, 2025
+            start_date = datetime(2025, 5, 1)
+            print(f"📅 Populating database with sample attendance data from {start_date.date()} to {today}...")
+        
+        # Define diverse workers with both old and new NIC formats
+        workers = [
+            # Old NIC format workers (ending with V/X)
+            {'nic': '123456789V', 'company': 'PCL', 'name': 'Kasun Perera', 'department': 'Production'},
+            {'nic': '987654321V', 'company': 'PPM', 'name': 'Saman Silva', 'department': 'Security'},
+            {'nic': '456789123V', 'company': 'PDSL', 'name': 'Nimal Fernando', 'department': 'Administration'},
+            {'nic': '789123456V', 'company': 'PUL', 'name': 'Ruwan Jayawardena', 'department': 'IT'},
+            {'nic': '321654987V', 'company': 'PCL', 'name': 'Pradeep Kumara', 'department': 'Maintenance'},
+            {'nic': '234567890V', 'company': 'PPM', 'name': 'Chaminda Rathnayake', 'department': 'Quality Control'},
+            {'nic': '345678901V', 'company': 'PDSL', 'name': 'Buddhika Wijesiri', 'department': 'Production'},
+            {'nic': '567890123V', 'company': 'PUL', 'name': 'Sampath Bandara', 'department': 'Security'},
+            {'nic': '678901234V', 'company': 'PCL', 'name': 'Lakmal Dias', 'department': 'HR'},
+            {'nic': '890123456V', 'company': 'PPM', 'name': 'Roshan Gunasekara', 'department': 'Finance'},
+            {'nic': '159753468X', 'company': 'PDSL', 'name': 'Janaka Mendis', 'department': 'Logistics'},
+            {'nic': '468135792X', 'company': 'PUL', 'name': 'Thilina Wickrama', 'department': 'Production'},
+            {'nic': '357912468X', 'company': 'PCL', 'name': 'Upul Rajapaksa', 'department': 'Technical'},
+            {'nic': '912345678X', 'company': 'PPM', 'name': 'Dinesh Abeysekara', 'department': 'Operations'},
+            {'nic': '741963852X', 'company': 'PDSL', 'name': 'Mahinda Ranatunga', 'department': 'Cleaning'},
+            
+            # New NIC format workers (12 digits)
+            {'nic': '200165432567', 'company': 'PUL', 'name': 'Amara Kodithuwakku', 'department': 'Production'},
+            {'nic': '199587412369', 'company': 'PCL', 'name': 'Thushara Sanjeewa', 'department': 'IT'},
+            {'nic': '198896745231', 'company': 'PPM', 'name': 'Kavinda Dissanayake', 'department': 'Security'},
+            {'nic': '200278451236', 'company': 'PDSL', 'name': 'Nuwan Chathuranga', 'department': 'Administration'},
+            {'nic': '199745123698', 'company': 'PUL', 'name': 'Gayan Madhushanka', 'department': 'Maintenance'},
+            {'nic': '200012369874', 'company': 'PCL', 'name': 'Sachith Pathirana', 'department': 'Quality Control'},
+            {'nic': '199512347896', 'company': 'PPM', 'name': 'Lakshan Perera', 'department': 'Production'},
+            {'nic': '200145612378', 'company': 'PDSL', 'name': 'Chanaka Rathnayake', 'department': 'Security'},
+            {'nic': '199887412365', 'company': 'PUL', 'name': 'Dhanuka Wijesinghe', 'department': 'HR'},
+            {'nic': '200156789123', 'company': 'PCL', 'name': 'Tharaka Jayasundara', 'department': 'Finance'},
+            {'nic': '199698741235', 'company': 'PPM', 'name': 'Nipuna Senanayake', 'department': 'Logistics'},
+            {'nic': '200078945612', 'company': 'PDSL', 'name': 'Kasun Mallikarachchi', 'department': 'Production'},
+            {'nic': '199523698741', 'company': 'PUL', 'name': 'Randika Wickramasinghe', 'department': 'Technical'},
+            {'nic': '200189632574', 'company': 'PCL', 'name': 'Asanka Ranaweera', 'department': 'Operations'},
+            {'nic': '199756123489', 'company': 'PPM', 'name': 'Dilan Senavirathne', 'department': 'Cleaning'},
+            {'nic': '200098741256', 'company': 'PDSL', 'name': 'Chathura Karunaratne', 'department': 'Production'},
+            {'nic': '199687452139', 'company': 'PUL', 'name': 'Buddhika Amarasinghe', 'department': 'Security'},
+            {'nic': '200123987456', 'company': 'PCL', 'name': 'Lahiru Wijesekara', 'department': 'IT'},
+            {'nic': '199512378965', 'company': 'PPM', 'name': 'Danushka Ekanayake', 'department': 'Administration'},
+            {'nic': '200045612398', 'company': 'PDSL', 'name': 'Shehan Gunathilake', 'department': 'Maintenance'}
+        ]
+        
+        # Define diverse shift schedules
+        shift_schedules = {
+            'Morning Shift': [
+                ('08:00:00', '17:00:00'),
+                ('08:30:00', '17:30:00'),
+                ('09:00:00', '18:00:00')
+            ],
+            'Afternoon Shift': [
+                ('13:00:00', '22:00:00'),
+                ('14:00:00', '23:00:00'),
+                ('15:00:00', '00:00:00')
+            ],
+            'Evening Shift': [
+                ('18:00:00', '03:00:00'),
+                ('19:00:00', '04:00:00'),
+                ('20:00:00', '05:00:00')
+            ],
+            'Night Shift': [
+                ('22:00:00', '07:00:00'),
+                ('23:00:00', '08:00:00'),
+                ('00:00:00', '09:00:00')
+            ],
+            'Early Morning': [
+                ('06:00:00', '15:00:00'),
+                ('06:30:00', '15:30:00'),
+                ('07:00:00', '16:00:00')
+            ],
+            'Late Morning': [
+                ('10:00:00', '19:00:00'),
+                ('10:30:00', '19:30:00'),
+                ('11:00:00', '20:00:00')
+            ],
+            'Flexible Shift': [
+                ('11:00:00', '20:00:00'),
+                ('12:00:00', '21:00:00'),
+                ('13:00:00', '22:00:00')
+            ],
+            'Production Shift': [
+                ('06:00:00', '14:00:00'),
+                ('14:00:00', '22:00:00'),
+                ('22:00:00', '06:00:00')
+            ],
+            'Security Shift': [
+                ('00:00:00', '08:00:00'),
+                ('08:00:00', '16:00:00'),
+                ('16:00:00', '00:00:00')
+            ],
+            'Weekend Shift': [
+                ('12:00:00', '21:00:00'),
+                ('14:00:00', '23:00:00'),
+                ('16:00:00', '01:00:00')
+            ]
+        }
+        
+        # Generate data from start_date to today
+        end_date = datetime.combine(today, datetime.min.time())
+        current_date = start_date
+        
+        attendance_data = []
+        
+        while current_date <= end_date:
+            # Skip some Sundays (70% chance to skip)
+            if current_date.weekday() == 6 and random.random() < 0.7:
+                current_date += timedelta(days=1)
+                continue
+                
+            for worker in workers:
+                # 88% attendance rate
+                if random.random() < 0.88:
+                    # Department-based shift assignment
+                    department = worker['department']
+                    if department == 'Production':
+                        shift_options = ['Morning Shift', 'Afternoon Shift', 'Evening Shift', 'Production Shift']
+                    elif department == 'Security':
+                        shift_options = ['Security Shift', 'Night Shift', 'Evening Shift', 'Weekend Shift']
+                    elif department in ['Administration', 'HR', 'Finance']:
+                        shift_options = ['Morning Shift', 'Late Morning', 'Flexible Shift']
+                    elif department == 'IT':
+                        shift_options = ['Morning Shift', 'Flexible Shift', 'Late Morning', 'Afternoon Shift']
+                    elif department in ['Maintenance', 'Technical']:
+                        shift_options = ['Early Morning', 'Morning Shift', 'Afternoon Shift', 'Evening Shift']
+                    elif department == 'Quality Control':
+                        shift_options = ['Morning Shift', 'Afternoon Shift', 'Production Shift']
+                    elif department == 'Logistics':
+                        shift_options = ['Early Morning', 'Morning Shift', 'Afternoon Shift']
+                    elif department == 'Operations':
+                        shift_options = ['Morning Shift', 'Afternoon Shift', 'Evening Shift', 'Flexible Shift']
+                    elif department == 'Cleaning':
+                        shift_options = ['Early Morning', 'Evening Shift', 'Weekend Shift']
+                    else:
+                        shift_options = list(shift_schedules.keys())
+                    
+                    # Weekend workers get different shifts
+                    if current_date.weekday() >= 5:  # Saturday or Sunday
+                        if department in ['Security', 'Production', 'Maintenance']:
+                            shift_options = ['Weekend Shift', 'Security Shift', 'Production Shift']
+                        else:
+                            # Reduced weekend staff
+                            if random.random() < 0.3:  # Only 30% chance for non-essential departments
+                                continue
+                            shift_options = ['Weekend Shift', 'Flexible Shift']
+                    
+                    shift = random.choice(shift_options)
+                    times = random.choice(shift_schedules[shift])
+                    
+                    # Add time variation (±20 minutes)
+                    in_hour, in_min, _ = map(int, times[0].split(':'))
+                    variation = random.randint(-20, 20)
+                    in_min += variation
+                    
+                    # Handle minute overflow
+                    if in_min >= 60:
+                        in_hour += 1
+                        in_min -= 60
+                    elif in_min < 0:
+                        in_hour -= 1
+                        in_min += 60
+                        
+                    if in_hour >= 24:
+                        in_hour -= 24
+                    elif in_hour < 0:
+                        in_hour += 24
+                        
+                    actual_in_time = f"{in_hour:02d}:{in_min:02d}:00"
+                    
+                    # Calculate out time (90% chance of checking out)
+                    actual_out_time = None
+                    if random.random() < 0.90:
+                        # Department-based work duration
+                        if department in ['Production', 'Security']:
+                            work_duration = random.randint(480, 540)  # 8-9 hours
+                        elif department in ['Administration', 'HR', 'Finance']:
+                            work_duration = random.randint(450, 510)  # 7.5-8.5 hours
+                        elif department == 'IT':
+                            work_duration = random.randint(480, 600)  # 8-10 hours (flexible)
+                        elif department in ['Maintenance', 'Technical']:
+                            work_duration = random.randint(480, 660)  # 8-11 hours (overtime possible)
+                        else:
+                            work_duration = random.randint(480, 540)  # Standard 8-9 hours
+                        
+                        # Convert in_time to minutes
+                        in_total_minutes = in_hour * 60 + in_min
+                        out_total_minutes = in_total_minutes + work_duration
+                        
+                        # Handle day overflow
+                        if out_total_minutes >= 1440:  # 24 hours = 1440 minutes
+                            out_total_minutes -= 1440
+                            
+                        out_hour = out_total_minutes // 60
+                        out_min = out_total_minutes % 60
+                        
+                        actual_out_time = f"{out_hour:02d}:{out_min:02d}:00"
+                    
+                    # Random status assignment
+                    status_options = ['Check in', 'Completed', 'Pending']
+                    status = random.choice(status_options)
+                    
+                    # Generate NIC image filenames
+                    front_image = f"front_{worker['nic']}.jpg"
+                    back_image = f"back_{worker['nic']}.jpg"
+                    
+                    attendance_data.append((
+                        worker['nic'],
+                        current_date.strftime('%Y-%m-%d'),
+                        actual_in_time,
+                        actual_out_time,
+                        shift,
+                        status,
+                        worker['company'],
+                        front_image,
+                        back_image
+                    ))
+            
+            current_date += timedelta(days=1)
+        
+        print(f"📊 Generated {len(attendance_data)} attendance records")
+        
+        # Insert all attendance data
+        insert_query = """
+        INSERT INTO `AttendanceRecords` (NIC, Date, InTime, OutTime, Shift, Status, Company, FrontNICImage, BackNICImage)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        
+        cursor.executemany(insert_query, attendance_data)
+        connection.commit()
+        
+        print(f"✅ Added {len(attendance_data)} attendance records to database")
+        print(f"📅 Data spans from {start_date.date()} to {today}")
+        print(f"👥 Covers {len(workers)} diverse workers")
+        print(f"⏰ Includes {len(shift_schedules)} different shift types")
+        
+        cursor.close()
+        connection.close()
+        
+    except Exception as e:
+        print(f"❌ Error populating sample data: {e}")
+
+# Populate sample data on startup
+populate_sample_data()
+
 app = Flask(__name__)
 app.secret_key = 'printcare_admin_secret_key_2025'
 UPLOAD_FOLDER = 'uploads'
@@ -55,12 +416,6 @@ def get_shift_from_time(check_time):
     else:
         # Night shift: 10:00 PM - 06:00 AM (covers late night and early morning)
         return "Night Shift"
-
-app = Flask(__name__)
-app.secret_key = 'printcare_admin_secret_key_2025'
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Database connection with error handling
 def get_db_connection():
@@ -154,44 +509,63 @@ def security_required(f):
     return decorated_function
 
 def verify_admin_credentials(username, password):
-    """Enhanced admin verification with security features"""
+    """Enhanced admin verification with database lookup and security features"""
     # Check account lockout
     if check_account_lockout(username):
         log_security_event('LOCKOUT_ATTEMPT', f'Login attempt on locked account: {username}')
         return False
     
-    # Verify credentials
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
-    is_valid = (username == ADMIN_CONFIG['username'] and 
-                password_hash == ADMIN_CONFIG['password_hash'])
-    
-    if not is_valid:
-        # Track failed attempts
-        if username not in failed_attempts:
-            failed_attempts[username] = []
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return False
+            
+        cursor = connection.cursor()
         
-        failed_attempts[username].append(datetime.now())
+        # Hash the provided password
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
         
-        # Clean old attempts (older than 1 hour)
-        failed_attempts[username] = [
-            attempt for attempt in failed_attempts[username]
-            if datetime.now() - attempt < timedelta(hours=1)
-        ]
+        # Check credentials in database
+        cursor.execute("""
+            SELECT id, username, full_name FROM admin_users 
+            WHERE username = %s AND password = %s
+        """, (username, password_hash))
         
-        # Lock account if too many failures
-        if len(failed_attempts[username]) >= ADMIN_CONFIG['max_failed_attempts']:
-            lockout_until = datetime.now() + timedelta(minutes=ADMIN_CONFIG['lockout_duration'])
-            locked_accounts[username] = lockout_until
-            log_security_event('ACCOUNT_LOCKED', f'Account {username} locked due to failed attempts')
+        user = cursor.fetchone()
+        cursor.close()
+        connection.close()
         
-        log_security_event('LOGIN_FAILED', f'Failed login attempt for: {username}')
+        if user:
+            log_security_event('LOGIN_SUCCESS', f'Admin {username} logged in successfully')
+            # Clear failed attempts on successful login
+            if username in failed_attempts:
+                del failed_attempts[username]
+            return True
+        else:
+            # Track failed attempts
+            if username not in failed_attempts:
+                failed_attempts[username] = []
+            
+            failed_attempts[username].append(datetime.now())
+        
+            # Clean old attempts (older than 1 hour)
+            failed_attempts[username] = [
+                attempt for attempt in failed_attempts[username]
+                if datetime.now() - attempt < timedelta(hours=1)
+            ]
+            
+            # Lock account if too many failures
+            if len(failed_attempts[username]) >= ADMIN_CONFIG['max_failed_attempts']:
+                lockout_until = datetime.now() + timedelta(minutes=ADMIN_CONFIG['lockout_duration'])
+                locked_accounts[username] = lockout_until
+                log_security_event('ACCOUNT_LOCKED', f'Account {username} locked due to failed attempts')
+            
+            log_security_event('LOGIN_FAILED', f'Failed login attempt for: {username}')
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error during admin verification: {e}")
         return False
-    else:
-        # Clear failed attempts on successful login
-        if username in failed_attempts:
-            del failed_attempts[username]
-        log_security_event('LOGIN_SUCCESS', f'Successful admin login: {username}')
-        return True
 
 def extract_nic_from_text(text):
     """Extract NIC from OCR text using regex patterns"""
@@ -487,11 +861,12 @@ def admin_stats():
             AND OutTime IS NOT NULL
         """, (selected_date,))
         result = cursor.fetchone()
-        date_hours = round(result[0] if result[0] else 0, 1)
+        total_hours = result[0] if result and result[0] else 0
         
-        # Get currently checked in for selected date (IN but no OUT)
+        # Get currently active workers (those with IN but no OUT today)
         cursor.execute("""
-            SELECT COUNT(DISTINCT NIC) FROM attendancerecords
+            SELECT COUNT(DISTINCT NIC) as active_workers
+            FROM attendancerecords 
             WHERE Date = %s 
             AND InTime IS NOT NULL 
             AND OutTime IS NULL
@@ -503,7 +878,7 @@ def admin_stats():
             "total_employees": total_employees,
             "date_attendance": date_attendance,
             "completed_sessions": completed_sessions,
-            "date_hours": date_hours,
+            "date_hours": round(total_hours, 1),
             "currently_in": currently_in
         })
         
@@ -663,7 +1038,7 @@ def search_attendance():
         
         if status_query:
             if status_query == 'IN':
-                base_query += " AND OutTime IS NULL"
+                base_query += " AND OutTime IS NULL AND InTime IS NOT NULL"
             elif status_query == 'OUT':
                 base_query += " AND OutTime IS NOT NULL"
             else:
@@ -684,7 +1059,7 @@ def search_attendance():
                 'in_time': str(record[3]) if record[3] else 'N/A',
                 'out_time': str(record[4]) if record[4] else 'N/A',
                 'shift': record[5] or 'N/A',
-                'status': record[6]
+                'status': record[6] or 'N/A'
             })
         
         return jsonify({
@@ -716,8 +1091,13 @@ def get_workers():
                 MAX(Date) as last_active,
                 COUNT(*) as total_sessions,
                 CASE 
-                    WHEN MAX(Date) = CURDATE() AND COUNT(CASE WHEN OutTime IS NULL THEN 1 END) > 0 THEN 'IN'
-                    WHEN MAX(Date) = CURDATE() AND COUNT(CASE WHEN OutTime IS NOT NULL THEN 1 END) > 0 THEN 'OUT'
+                    WHEN MAX(Date) = CURDATE() AND 
+                         EXISTS(SELECT 1 FROM AttendanceRecords ar2 
+                                WHERE ar2.NIC = AttendanceRecords.NIC 
+                                AND ar2.Date = CURDATE() 
+                                AND ar2.InTime IS NOT NULL
+                                AND ar2.OutTime IS NULL) THEN 'IN'
+                    WHEN MAX(Date) = CURDATE() THEN 'OUT'
                     ELSE 'INACTIVE'
                 END as current_status
             FROM AttendanceRecords 
@@ -913,12 +1293,7 @@ def daily_report():
         # Build query with filters
         query = """
         SELECT 
-            NIC, Date, InTime, OutTime, Shift, Status, Company,
-            CASE 
-                WHEN InTime IS NOT NULL AND OutTime IS NOT NULL 
-                THEN TIMEDIFF(OutTime, InTime)
-                ELSE NULL 
-            END as WorkDuration
+            NIC, Date, InTime, OutTime, Shift, Status, Company
         FROM `AttendanceRecords`
         WHERE Date = %s
         """
@@ -940,13 +1315,10 @@ def daily_report():
         # Calculate summary statistics
         total_records = len(records)
         checked_in = len([r for r in records if r['Status'] == 'Check in'])
-        completed = len([r for r in records if r['Status'] == 'Completed'])
-        pending = len([r for r in records if r['Status'] == 'Pending'])
+        checked_out = len([r for r in records if r['Status'] == 'Completed'])
         
-        # Convert timedelta to string for JSON serialization
+        # Convert time to string for JSON serialization
         for record in records:
-            if record['WorkDuration']:
-                record['WorkDuration'] = str(record['WorkDuration'])
             if record['InTime']:
                 record['InTime'] = str(record['InTime'])
             if record['OutTime']:
@@ -958,8 +1330,8 @@ def daily_report():
             'summary': {
                 'total_records': total_records,
                 'checked_in': checked_in,
-                'completed': completed,
-                'pending': pending
+                'checked_out': checked_out,
+                'active': checked_in - checked_out if checked_in > checked_out else 0
             },
             'records': records
         })
@@ -1063,9 +1435,8 @@ def monthly_report():
             Shift,
             COUNT(*) as TotalRecords,
             COUNT(DISTINCT NIC) as UniqueWorkers,
-            COUNT(CASE WHEN Status = 'Check in' THEN 1 END) as CheckedIn,
-            COUNT(CASE WHEN Status = 'Completed' THEN 1 END) as Completed,
-            COUNT(CASE WHEN Status = 'Pending' THEN 1 END) as Pending,
+            COUNT(CASE WHEN InTime IS NOT NULL THEN 1 END) as CheckedIn,
+            COUNT(CASE WHEN OutTime IS NOT NULL THEN 1 END) as CheckedOut,
             AVG(CASE 
                 WHEN InTime IS NOT NULL AND OutTime IS NOT NULL 
                 THEN TIME_TO_SEC(TIMEDIFF(OutTime, InTime))/3600 
