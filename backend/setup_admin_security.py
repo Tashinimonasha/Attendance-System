@@ -12,10 +12,10 @@ try:
         host="localhost",
         user="root",
         password="Tashini258258",  # Update with your MySQL password
-        database="attendance_system"
+        database="AttendanceDB"  # Fixed database name
     )
     cursor = db.cursor()
-    print("✅ Connected to database successfully")
+    print("✅ Connected to AttendanceDB database successfully")
 except Exception as e:
     print(f"❌ Database connection failed: {e}")
     exit(1)
@@ -23,17 +23,21 @@ except Exception as e:
 def create_admin_table():
     """Create admin users table for secure authentication"""
     try:
+        # Drop existing table if it has issues and recreate
+        print("🔧 Setting up admin_users table...")
+        
+        cursor.execute("DROP TABLE IF EXISTS admin_users")
+        print("   Dropped existing admin_users table (if any)")
+        
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS admin_users (
+            CREATE TABLE `admin_users` (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 username VARCHAR(50) UNIQUE NOT NULL,
-                password VARCHAR(64) NOT NULL,  -- SHA256 hash
+                password VARCHAR(64) NOT NULL,
                 full_name VARCHAR(100),
                 email VARCHAR(100),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                last_login TIMESTAMP NULL,
-                is_active BOOLEAN DEFAULT TRUE
-            )
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         """)
         
         print("✅ Admin users table created successfully")
@@ -43,16 +47,14 @@ def create_admin_table():
         hashed_password = hashlib.sha256(default_password.encode()).hexdigest()
         
         cursor.execute("""
-            INSERT IGNORE INTO admin_users (username, password, full_name, email)
+            INSERT INTO admin_users (username, password, full_name, email)
             VALUES (%s, %s, %s, %s)
         """, ('admin', hashed_password, 'System Administrator', 'admin@printcare.com'))
         
-        if cursor.rowcount > 0:
-            print("✅ Default admin user created")
-            print("   Username: admin")
-            print("   Password: printcare2025")
-        else:
-            print("ℹ️  Admin user already exists")
+        print("✅ Default admin user created")
+        print("📋 Default admin credentials:")
+        print("   Username: admin")
+        print("   Password: printcare2025")
         
         db.commit()
         
@@ -63,18 +65,16 @@ def create_admin_table():
 def show_admin_users():
     """Display current admin users"""
     try:
-        cursor.execute("SELECT username, full_name, email, created_at, is_active FROM admin_users")
+        cursor.execute("SELECT username, full_name, email, created_at FROM admin_users")
         users = cursor.fetchall()
         
         print("\n📋 Current Admin Users:")
         print("-" * 60)
         for user in users:
-            status = "Active" if user[4] else "Inactive"
             print(f"Username: {user[0]}")
             print(f"Name: {user[1] or 'N/A'}")
             print(f"Email: {user[2] or 'N/A'}")
             print(f"Created: {user[3]}")
-            print(f"Status: {status}")
             print("-" * 60)
             
     except Exception as e:
