@@ -755,17 +755,21 @@ def capture_nic_images():
 
 @app.route('/save_nic_image', methods=['POST'])
 def save_nic_image():
-    """Save captured NIC image (front or back)"""
+    """Save captured NIC image (front or back) with NIC number as filename"""
     try:
         if 'nic_image' not in request.files:
             return jsonify({"success": False, "message": "No image uploaded"}), 400
         
         file = request.files['nic_image']
         image_type = request.form.get('image_type', 'front')  # 'front' or 'back'
+        nic_number = request.form.get('nic_number', '')  # Get NIC number from form
         timestamp = request.form.get('timestamp', datetime.now().strftime("%Y%m%d_%H%M%S"))
         
         if file.filename == '':
             return jsonify({"success": False, "message": "No file selected"}), 400
+            
+        if not nic_number:
+            return jsonify({"success": False, "message": "NIC number is required"}), 400
         
         # Create directories if they don't exist
         front_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'front')
@@ -773,34 +777,33 @@ def save_nic_image():
         os.makedirs(front_dir, exist_ok=True)
         os.makedirs(back_dir, exist_ok=True)
         
-        # Generate filename
+        # Generate filename with NIC number
         if image_type == 'front':
-            filename = f"front_{timestamp}.jpg"
+            filename = f"{nic_number}_front.jpg"
             filepath = os.path.join(front_dir, filename)
         else:
-            filename = f"back_{timestamp}.jpg"
+            filename = f"{nic_number}_back.jpg"
             filepath = os.path.join(back_dir, filename)
         
-        # Save the image
+        # Save the image (overwrite if exists)
         file.save(filepath)
         
-        # Only extract NIC from front image if we don't have current NIC in session
-        # Since we now extract NIC first, we don't need to re-extract
-        nic_number = None
+        # Only extract NIC from front image for verification if needed
+        extracted_nic = None
         if image_type == 'front':
             # Optionally extract NIC for verification, but don't require it
             try:
-                nic_number = extract_nic(filepath)
+                extracted_nic = extract_nic(filepath)
             except Exception as e:
                 print(f"NIC extraction from front image failed: {e}")
                 # Continue without error since we already have NIC
         
         return jsonify({
             "success": True,
-            "message": f"NIC {image_type} image saved successfully",
+            "message": f"NIC {image_type} image saved as {filename}",
             "filename": filename,
             "filepath": filepath,
-            "nic_number": nic_number if image_type == 'front' else None,
+            "nic_number": extracted_nic if image_type == 'front' else nic_number,
             "image_type": image_type,
             "timestamp": timestamp
         })

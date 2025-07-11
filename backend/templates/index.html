@@ -996,16 +996,16 @@
       const frameRect = nicGuideFrame.getBoundingClientRect();
       const videoRect = nicVideo.getBoundingClientRect();
       
-      // Calculate frame dimensions
+      // Calculate frame dimensions for full ID card capture
       let frameWidth, frameHeight;
       if (nicCaptureStep === 'front') {
-        // Front: Portrait (vertical) - 224x320px
-        frameWidth = 224;
-        frameHeight = 320;
+        // Front: Portrait (vertical) - Larger dimensions for full ID card (w-72 h-96 = 288x384px)
+        frameWidth = 288;
+        frameHeight = 384;
       } else {
-        // Back: Landscape (horizontal) - 320x224px  
-        frameWidth = 320;
-        frameHeight = 224;
+        // Back: Landscape (horizontal) - Larger dimensions for full ID card (w-96 h-72 = 384x288px)
+        frameWidth = 384;
+        frameHeight = 288;
       }
       
       // Set canvas dimensions
@@ -1041,8 +1041,11 @@
       captureCanvas.toBlob(async (blob) => {
         try {
           const formData = new FormData();
-          formData.append('nic_image', blob, `nic_${nicCaptureStep}_${Date.now()}.jpg`);
+          // Use NIC number as filename instead of timestamp
+          const nicFilename = `${currentNic}_${nicCaptureStep}.jpg`;
+          formData.append('nic_image', blob, nicFilename);
           formData.append('image_type', nicCaptureStep);
+          formData.append('nic_number', currentNic);
           formData.append('timestamp', capturedImages.timestamp);
           
           const res = await fetch('/save_nic_image', {
@@ -1055,7 +1058,7 @@
           if (res.ok && data.success) {
             capturedImages[nicCaptureStep] = data.filepath;
             
-            showMessage(`✅ ${nicCaptureStep.toUpperCase()} image captured successfully!`, 'success');
+            showMessage(`✅ ${nicCaptureStep.toUpperCase()} image saved as ${data.filename}!`, 'success');
             
             if (nicCaptureStep === 'front') {
               // Move to back capture
