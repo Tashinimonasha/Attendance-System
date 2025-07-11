@@ -859,11 +859,16 @@ def record_attendance():
             'Finance Team': 'PCL',
             'Marketing': 'PPM',
             'IT Support': 'PDSL',
-            'Quality Assurance': 'PUL'
+            'Quality Assurance': 'PUL',
+            # Direct department codes
+            'PUL': 'PUL',
+            'PCL': 'PCL',
+            'PPM': 'PPM',
+            'PDSL': 'PDSL'
         }
         
         # Map the company to database enum value
-        db_company = company_mapping.get(company, 'PUL')  # Default to PUL
+        db_company = company_mapping.get(company, company if company in ['PUL', 'PCL', 'PPM', 'PDSL'] else 'PUL')  # Default to PUL
         
         if action == 'IN':
             # Calculate shift from time
@@ -879,7 +884,7 @@ def record_attendance():
             
             return jsonify({
                 "status": "success",
-                "message": f"✅ IN recorded for {nic} at {company} with NIC images",
+                "message": f"✅ IN recorded for {nic} at Department {company} with NIC images",
                 "time": now.strftime("%H:%M:%S")
             })
             
@@ -926,7 +931,7 @@ def record_attendance():
             
             return jsonify({
                 "status": "success",
-                "message": f"✅ OUT recorded for {nic} at {company}",
+                "message": f"✅ OUT recorded for {nic} at Department {company}",
                 "time": now.strftime("%H:%M:%S"),
                 "work_hours": work_hours
             })

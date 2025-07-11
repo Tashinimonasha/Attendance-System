@@ -98,11 +98,10 @@
         <label for="company" class="text-2xl font-bold text-gray-700">Select Your Department:</label>
         <select name="company" id="company" class="px-6 py-3 text-xl font-semibold border-2 border-gray-300 rounded-xl bg-white shadow-lg focus:outline-none focus:border-blue-500">
           <option value="">-- Select Department --</option>
-          <option value="Printcare Solutions">PUL</option>
-          <option value="Tech Division">PCL</option>
-          <option value="Design Team">PPM</option>
-          <option value="Operations">PDSL</option>
-
+          <option value="PUL">PUL</option>
+          <option value="PCL">PCL</option>
+          <option value="PPM">PPM</option>
+          <option value="PDSL">PDSL</option>
         </select>
       </div>
   
@@ -286,7 +285,7 @@
         <p id="successMessage" class="text-xl text-gray-700 mb-6"></p>
         <div class="bg-gray-100 p-4 rounded-lg">
           <p class="text-sm text-gray-600">NIC: <span id="finalNic" class="font-mono font-bold"></span></p>
-          <p class="text-sm text-gray-600">Company: <span id="finalCompany" class="font-bold"></span></p>
+          <p class="text-sm text-gray-600">Department: <span id="finalCompany" class="font-bold"></span></p>
           <p class="text-sm text-gray-600">Time: <span id="finalTime" class="font-bold"></span></p>
           <p id="workHoursDisplay" class="text-sm text-gray-600 hidden">Work Hours: <span id="finalWorkHours" class="font-bold"></span></p>
           <p id="nicImagesConfirm" class="text-sm text-green-600 hidden">
@@ -365,7 +364,7 @@
       frontImageData: null, // Base64 image data for preview
       backImageData: null,  // Base64 image data for preview
       timestamp: null
-    };    // Company selection logic
+    };    // Department selection logic
     companySelect.addEventListener('change', function() {
       const selectedCompany = this.value;      if (selectedCompany) {
         btnIn.disabled = false;
@@ -687,7 +686,8 @@
         const requestData = {
           action: currentAction.toUpperCase(),
           nic: currentNic,
-          company: currentCompany
+          company: currentCompany,  // Keep as 'company' for backend compatibility
+          department: currentCompany  // Add department field for display
         };
         
         // Add image paths for IN action
@@ -711,7 +711,7 @@
             success: true,
             message: data.message,
             nic: currentNic,
-            company: currentCompany,
+            department: currentCompany,
             time: data.time,
             work_hours: data.work_hours,
             has_images: currentAction === 'in' && capturedImages.front && capturedImages.back
@@ -745,7 +745,7 @@
       
       successMessage.textContent = data.message;
       finalNic.textContent = data.nic;
-      finalCompany.textContent = data.company;
+      finalCompany.textContent = data.department || data.company; // Support both for compatibility
       finalTime.textContent = data.time;
       
       // Show work hours for OUT actions
