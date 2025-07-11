@@ -725,7 +725,7 @@ def scan():
 
 @app.route('/capture_nic_images', methods=['POST'])
 def capture_nic_images():
-    """Capture NIC front and back images for attendance"""
+    """Capture NIC front and back images for attendance - IN ONLY"""
     try:
         data = request.get_json()
         action = data.get('action', '').upper()
@@ -733,15 +733,15 @@ def capture_nic_images():
         if action != 'IN':
             return jsonify({
                 "success": False,
-                "message": "NIC capture is only required for IN action"
-            }), 400
+                "message": "NIC image capture is not required for OUT action - proceeding without images"
+            }), 200  # Changed to 200 status to indicate this is expected behavior
         
         # Generate timestamp for unique filenames
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         return jsonify({
             "success": True,
-            "message": "Ready to capture NIC images",
+            "message": "Ready to capture NIC images for IN action",
             "timestamp": timestamp,
             "step": "front"
         })
@@ -832,12 +832,13 @@ def record_attendance():
                 "message": "Missing required fields"
             }), 400
         
-        # For IN action, validate that image paths are provided
-        if action == 'IN' and (not front_image_path or not back_image_path):
-            return jsonify({
-                "status": "error",
-                "message": "NIC front and back images are required for check-in"
-            }), 400
+        # For IN action, validate that image paths are provided (optional - can be empty for fast check-in)
+        # Images are only required if specifically requested
+        # if action == 'IN' and (not front_image_path or not back_image_path):
+        #     return jsonify({
+        #         "status": "error",
+        #         "message": "NIC front and back images are required for check-in"
+        #     }), 400
         
         if not db or not cursor:
             return jsonify({
@@ -874,17 +875,21 @@ def record_attendance():
             # Calculate shift from time
             shift = get_shift_from_time(now)
             
+            # Use provided image paths or empty strings if not provided
+            front_img = front_image_path if front_image_path else ''
+            back_img = back_image_path if back_image_path else ''
+            
             cursor.execute(
                 """INSERT INTO AttendanceRecords 
                    (NIC, Date, InTime, Shift, Status, Company, FrontNICImage, BackNICImage) 
                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""", 
-                (nic, today, now, shift, 'Check in', db_company, front_image_path, back_image_path)
+                (nic, today, now, shift, 'Check in', db_company, front_img, back_img)
             )
             db.commit()
             
             return jsonify({
                 "status": "success",
-                "message": f"✅ IN recorded for {nic} at Department {company} with NIC images",
+                "message": f"✅ IN recorded for {nic} at Department {company}",
                 "time": now.strftime("%H:%M:%S")
             })
             

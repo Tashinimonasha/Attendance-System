@@ -16,49 +16,6 @@
       background: rgba(0, 0, 50, 0.6);
       z-index: -1;
     }
-    
-    /* Enhanced yellow frame animation */
-    @keyframes yellowPulse {
-      0%, 100% { 
-        border-color: #FBBF24; 
-        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
-      }
-      50% { 
-        border-color: #F59E0B; 
-        box-shadow: 0 0 0 8px rgba(251, 191, 36, 0);
-      }
-    }
-    
-    .yellow-frame-focus {
-      animation: yellowPulse 2s infinite;
-    }
-    
-    /* Preview enhancement */
-    .preview-container {
-      background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-    }
-    
-    /* Capture flash effect */
-    @keyframes captureFlash {
-      0% { background-color: rgba(255, 255, 255, 0); }
-      50% { background-color: rgba(255, 255, 255, 0.8); }
-      100% { background-color: rgba(255, 255, 255, 0); }
-    }
-    
-    .capture-flash {
-      animation: captureFlash 0.3s ease-out;
-    }
-    
-    /* Live indicator pulse */
-    @keyframes livePulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-    
-    .live-pulse {
-      animation: livePulse 1s infinite;
-    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-white font-sans">
@@ -93,15 +50,15 @@
   <div class="bg-white bg-opacity-95 text-gray-900 rounded-3xl shadow-2xl p-10 max-w-4xl w-full">
       <!-- Step 1: Main IN/OUT buttons -->
     <div id="mainButtons" class="flex flex-col items-center gap-8 mb-8">
-      <!-- Department Selection -->
+      <!-- Company Selection -->
       <div class="flex flex-col items-center space-y-4">
-        <label for="department" class="text-2xl font-bold text-gray-700">Select Your Department:</label>
-        <select name="department" id="department" class="px-6 py-3 text-xl font-semibold border-2 border-gray-300 rounded-xl bg-white shadow-lg focus:outline-none focus:border-blue-500">
+        <label for="company" class="text-2xl font-bold text-gray-700">Select Your Department:</label>
+        <select name="company" id="company" class="px-6 py-3 text-xl font-semibold border-2 border-gray-300 rounded-xl bg-white shadow-lg focus:outline-none focus:border-blue-500">
           <option value="">-- Select Department --</option>
+          <option value="PLC">PCL</option>
           <option value="PUL">PUL</option>
-          <option value="PCL">PCL</option>
+            <option value="PLC">PDSL</option>
           <option value="PPM">PPM</option>
-          <option value="PDSL">PDSL</option>
         </select>
       </div>
   
@@ -129,8 +86,8 @@
           <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-yellow-400"></div>
           <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-yellow-400"></div>
         </div>
-      </div>      <div class="text-center">        <p class="text-sm text-gray-600 font-semibold">📷 Position ID card within yellow frame - Hold steady!</p>
-        <p class="text-xs text-green-600">🎯 ACCURATE scanning - Multiple algorithms for best results!</p>
+      </div>      <div class="text-center">        <p class="text-sm text-gray-600 font-semibold">📷 Position ID card within the yellow frame</p>
+        <p class="text-xs text-green-600">⚡ FAST scanning - Quick NIC detection!</p>
       </div>
       <div class="flex gap-4">
         <button id="manualEntryBtn" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-semibold shadow-lg">
@@ -157,109 +114,13 @@
       </div>
     </div>
 
-    <!-- Step 4: NIC Image Capture (for IN action only) -->
-    <div id="nicCaptureContainer" class="hidden flex flex-col items-center space-y-6">
-      <h3 id="nicCaptureTitle" class="text-2xl font-bold text-center text-green-600">📷 Capture NIC Images for Check-in</h3>
-      
-      <div class="bg-blue-100 p-4 rounded-lg border-2 border-blue-400 mb-4">
-        <p class="text-lg font-semibold text-blue-800 text-center">
-          <i class="fas fa-info-circle mr-2"></i>
-          NIC Number: <span id="nicNumberDisplay" class="font-mono"></span>
-        </p>
-        <p class="text-sm text-blue-700 text-center mt-2">
-          Now capture both front and back images of your NIC
-        </p>
-      </div>
-      
-      <div class="relative">
-        <video id="nicVideo" autoplay playsinline class="rounded-lg shadow w-full max-w-md border-4 border-green-400"></video>
-        <!-- Scanning overlay -->
-        <div class="absolute inset-0 border-4 border-green-400 rounded-lg animate-pulse opacity-75 pointer-events-none"></div>
-        <!-- Guide frame for NIC cards (dynamic orientation) -->
-        <div id="nicGuideFrame" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-56 h-80 border-4 border-yellow-400 rounded-lg pointer-events-none shadow-lg yellow-frame-focus">
-          <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-yellow-400"></div>
-          <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-yellow-400"></div>
-          <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-yellow-400"></div>
-          <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-yellow-400"></div>
-          <!-- Enhanced NIC orientation guide -->
-          <div id="nicOrientationGuide" class="absolute top-2 left-1/2 transform -translate-x-1/2 text-yellow-400 text-xs font-bold bg-black bg-opacity-50 px-2 py-1 rounded">
-            📄 FRONT NIC
-          </div>
-          <!-- Animated pulsing border for better focus -->
-          <div class="absolute inset-0 border-2 border-yellow-300 rounded-lg animate-ping opacity-30"></div>
-        </div>
-      </div>
-      
-      <div class="text-center space-y-3">
-        <p id="nicCaptureInstruction" class="text-lg font-semibold text-gray-700 mb-2">
-          📱 Hold NIC FRONT  within the yellow frame
-        </p>
-        <div class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3 mt-2">
-          <p class="text-sm text-yellow-800 font-semibold">
-            <i class="fas fa-bullseye mr-1"></i>
-            Position your NIC so it fills the yellow frame completely
-          </p>
-          <p id="orientationHint" class="text-xs text-yellow-700 mt-1">
-            📄 Hold FRONT side vertically (portrait mode)
-          </p>
-        </div>
-      </div>
-      
-      <div class="flex gap-4">
-        <button id="captureNicBtn" class="px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-bold text-lg shadow-lg">
-          📸 Capture Front
-        </button>
-        <button id="skipNicCaptureBtn" class="px-6 py-3 bg-gray-500 hover:bg-gray-600 rounded-lg text-white font-semibold shadow-lg">
-          Skip NIC Capture
-        </button>
-        <button id="cancelNicCaptureBtn" class="px-6 py-3 bg-red-500 hover:bg-red-600 rounded-lg text-white font-semibold shadow-lg">
-          ❌ Cancel
-        </button>
-      </div>
-      
-      <!-- Progress indicator -->
-      <div class="flex items-center space-x-4">
-        <div id="frontProgress" class="flex items-center space-x-2">
-          <div class="w-4 h-4 bg-gray-300 rounded-full"></div>
-          <span class="text-sm text-gray-600">Front NIC</span>
-        </div>
-        <div class="w-8 h-0.5 bg-gray-300"></div>
-        <div id="backProgress" class="flex items-center space-x-2">
-          <div class="w-4 h-4 bg-gray-300 rounded-full"></div>
-          <span class="text-sm text-gray-600">Back NIC</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Step 5: NIC verification and submission -->
+    <!-- Step 4: NIC verification and submission -->
     <div id="verificationContainer" class="hidden flex flex-col items-center space-y-6">
       <h3 id="verifyTitle" class="text-2xl font-bold text-center">Verify NIC for IN</h3>
       
       <div class="bg-gray-100 p-6 rounded-lg border-2 border-blue-300">
         <p class="text-lg font-semibold text-gray-700 mb-2">Scanned NIC:</p>
         <p id="scannedNic" class="text-3xl font-mono font-bold text-blue-600 tracking-wider text-center"></p>
-      </div>
-      
-      <!-- NIC Images Preview (if captured) -->
-      <div id="nicImagesPreview" class="hidden bg-gray-50 p-6 rounded-lg border-2 border-gray-300">
-        <p class="text-lg font-semibold text-gray-700 mb-4 text-center">📷 Captured NIC Images:</p>
-        <div class="flex gap-8 justify-center">
-          <div class="text-center">
-            <p class="text-sm text-gray-600 mb-3 font-semibold">Front NIC</p>
-            <div class="border-2 border-green-400 rounded-lg overflow-hidden shadow-lg bg-white">
-              <img id="frontImagePreview" src="" alt="Front NIC" class="w-32 h-48 object-cover" style="display: none;">
-            </div>
-          </div>
-          <div class="text-center">
-            <p class="text-sm text-gray-600 mb-3 font-semibold">Back NIC</p>
-            <div class="border-2 border-green-400 rounded-lg overflow-hidden shadow-lg bg-white">
-              <img id="backImagePreview" src="" alt="Back NIC" class="w-32 h-48 object-cover" style="display: none;">
-            </div>
-          </div>
-        </div>
-        <p class="text-xs text-green-600 text-center mt-2">
-          <i class="fas fa-check-circle mr-1"></i>Both images captured successfully
-        </p>
       </div>
       
       <p class="text-lg text-center text-gray-700">Is this NIC correct?</p>
@@ -275,9 +136,7 @@
           📷 Rescan
         </button>
       </div>
-    </div>
-
-    <!-- Step 6: Success message -->
+    </div>    <!-- Step 5: Success message -->
     <div id="successContainer" class="hidden flex flex-col items-center space-y-4">
       <div class="text-center">
         <div class="text-6xl mb-4">🎉</div>
@@ -285,12 +144,9 @@
         <p id="successMessage" class="text-xl text-gray-700 mb-6"></p>
         <div class="bg-gray-100 p-4 rounded-lg">
           <p class="text-sm text-gray-600">NIC: <span id="finalNic" class="font-mono font-bold"></span></p>
-          <p class="text-sm text-gray-600">Department: <span id="finalDepartment" class="font-bold"></span></p>
+          <p class="text-sm text-gray-600">Company: <span id="finalCompany" class="font-bold"></span></p>
           <p class="text-sm text-gray-600">Time: <span id="finalTime" class="font-bold"></span></p>
           <p id="workHoursDisplay" class="text-sm text-gray-600 hidden">Work Hours: <span id="finalWorkHours" class="font-bold"></span></p>
-          <p id="nicImagesConfirm" class="text-sm text-green-600 hidden">
-            <i class="fas fa-camera mr-1"></i>NIC images captured and saved
-          </p>
         </div>
       </div>
       <button id="newEntryBtn" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold">
@@ -305,7 +161,7 @@
     const mainButtons = document.getElementById('mainButtons');
     const btnIn = document.getElementById('btnIn');
     const btnOut = document.getElementById('btnOut');
-    const departmentSelect = document.getElementById('department');
+    const companySelect = document.getElementById('company');
     
     const cameraContainer = document.getElementById('cameraContainer');
     const scanTitle = document.getElementById('scanTitle');
@@ -319,65 +175,41 @@
     const confirmManualBtn = document.getElementById('confirmManualBtn');
     const cancelManualBtn = document.getElementById('cancelManualBtn');
     
-    // NIC capture elements
-    const nicCaptureContainer = document.getElementById('nicCaptureContainer');
-    const nicCaptureTitle = document.getElementById('nicCaptureTitle');
-    const nicVideo = document.getElementById('nicVideo');
-    const nicNumberDisplay = document.getElementById('nicNumberDisplay');
-    const nicCaptureInstruction = document.getElementById('nicCaptureInstruction');
-    const captureNicBtn = document.getElementById('captureNicBtn');
-    const skipNicCaptureBtn = document.getElementById('skipNicCaptureBtn');
-    const cancelNicCaptureBtn = document.getElementById('cancelNicCaptureBtn');
-    const frontProgress = document.getElementById('frontProgress');
-    const backProgress = document.getElementById('backProgress');
-    
     const verificationContainer = document.getElementById('verificationContainer');
     const verifyTitle = document.getElementById('verifyTitle');
     const scannedNic = document.getElementById('scannedNic');
-    const nicImagesPreview = document.getElementById('nicImagesPreview');
     const submitBtn = document.getElementById('submitBtn');
     const editNicBtn = document.getElementById('editNicBtn');
     const rescanBtn = document.getElementById('rescanBtn');
-    
-    const successContainer = document.getElementById('successContainer');
+      const successContainer = document.getElementById('successContainer');
     const successMessage = document.getElementById('successMessage');
     const finalNic = document.getElementById('finalNic');
-    const finalDepartment = document.getElementById('finalDepartment');
+    const finalCompany = document.getElementById('finalCompany');
     const finalTime = document.getElementById('finalTime');
     const finalWorkHours = document.getElementById('finalWorkHours');
     const workHoursDisplay = document.getElementById('workHoursDisplay');
-    const nicImagesConfirm = document.getElementById('nicImagesConfirm');
     const newEntryBtn = document.getElementById('newEntryBtn');
     
     const messageDiv = document.getElementById('message');    // State variables
     let stream = null;
-    let nicStream = null;
     let intervalId = null;
     let currentAction = null;
     let currentNic = null;
-    let currentDepartment = null;
-    let scanning = false;
-    let nicCaptureStep = 'front'; // 'front' or 'back'
-    let capturedImages = {
-      front: null,
-      back: null,
-      frontImageData: null, // Base64 image data for preview
-      backImageData: null,  // Base64 image data for preview
-      timestamp: null
-    };    // Department selection logic
-    departmentSelect.addEventListener('change', function() {
-      const selectedDepartment = this.value;      if (selectedDepartment) {
+    let currentCompany = null;
+    let scanning = false;    // Company selection logic
+    companySelect.addEventListener('change', function() {
+      const selectedCompany = this.value;      if (selectedCompany) {
         btnIn.disabled = false;
         btnOut.disabled = false;
         btnIn.classList.remove('opacity-50', 'cursor-not-allowed');
         btnOut.classList.remove('opacity-50', 'cursor-not-allowed');
-        currentDepartment = selectedDepartment;
+        currentCompany = selectedCompany;
       } else {
         btnIn.disabled = true;
         btnOut.disabled = true;
         btnIn.classList.add('opacity-50', 'cursor-not-allowed');
         btnOut.classList.add('opacity-50', 'cursor-not-allowed');
-        currentDepartment = null;
+        currentCompany = null;
       }
     });
 
@@ -386,15 +218,8 @@
       mainButtons.classList.add('hidden');
       cameraContainer.classList.add('hidden');
       manualEntryContainer.classList.add('hidden');
-      nicCaptureContainer.classList.add('hidden');
       verificationContainer.classList.add('hidden');
       successContainer.classList.add('hidden');
-      
-      // Ensure NIC images preview is hidden when containers are reset
-      if (nicImagesPreview) {
-        nicImagesPreview.classList.add('hidden');
-      }
-      
       messageDiv.textContent = '';
       messageDiv.className = 'mt-8 text-center text-lg font-semibold min-h-[3rem]';
     }
@@ -409,10 +234,7 @@
       scanning = false;
       if (intervalId) clearInterval(intervalId);
       if (stream) stream.getTracks().forEach(track => track.stop());
-      if (nicStream) nicStream.getTracks().forEach(track => track.stop());
       video.srcObject = null;
-      nicVideo.srcObject = null;
-      stopCroppedPreview();
     }
 
     function resetToMainPage() {
@@ -421,50 +243,12 @@
       mainButtons.classList.remove('hidden');
       currentAction = null;
       currentNic = null;
-      currentDepartment = null;
-      nicCaptureStep = 'front';
-      capturedImages = { front: null, back: null, frontImageData: null, backImageData: null, timestamp: null };
-      manualNic.value = '';      
-      departmentSelect.value = '';
+      currentCompany = null;
+      manualNic.value = '';      companySelect.value = '';
       btnIn.disabled = true;
       btnOut.disabled = true;
       btnIn.classList.add('opacity-50', 'cursor-not-allowed');
       btnOut.classList.add('opacity-50', 'cursor-not-allowed');
-      
-      // Reset progress indicators
-      resetProgressIndicators();
-      
-      // Reset NIC capture UI elements to default state
-      if (nicVideo) {
-        nicVideo.style.display = 'block';
-        nicVideo.style.opacity = '1';
-      }
-      if (captureNicBtn) {
-        captureNicBtn.style.display = 'inline-block';
-        captureNicBtn.disabled = false;
-      }
-      if (skipNicCaptureBtn) {
-        skipNicCaptureBtn.style.display = 'inline-block';
-      }
-      const relativeDiv = document.querySelector('#nicCaptureContainer .relative');
-      if (relativeDiv) {
-        relativeDiv.style.display = 'block';
-      }
-      const textCenterDivs = document.querySelectorAll('#nicCaptureContainer .text-center');
-      if (textCenterDivs[1]) {
-        textCenterDivs[1].style.display = 'block';
-      }
-      
-      // Reset preview elements
-      const previewPlaceholder = document.getElementById('previewPlaceholder');
-      const liveIndicator = document.getElementById('liveIndicator');
-      if (previewPlaceholder) previewPlaceholder.style.display = 'flex';
-      if (liveIndicator) liveIndicator.style.display = 'none';
-    }
-    
-    function resetProgressIndicators() {
-      frontProgress.querySelector('.w-4').className = 'w-4 h-4 bg-gray-300 rounded-full';
-      backProgress.querySelector('.w-4').className = 'w-4 h-4 bg-gray-300 rounded-full';
     }    // Step 1: Main button handlers
     btnIn.addEventListener('click', () => startScanning('in'));
     btnOut.addEventListener('click', () => startScanning('out'));
@@ -476,7 +260,7 @@
       hideAllContainers();
       cameraContainer.classList.remove('hidden');
       
-      scanTitle.textContent = `🔍 Accurate NIC Scanning for ${action.toUpperCase()}`;
+      scanTitle.textContent = `Scanning for ${action.toUpperCase()}`;
       scanTitle.className = `text-2xl font-bold text-center mb-4 ${action === 'in' ? 'text-green-600' : 'text-red-600'}`;
       
       showMessage('Starting camera...', 'info');      try {
@@ -489,38 +273,23 @@
           } 
         });
         video.srcObject = stream;
-        scanning = true;        showMessage(`🔍 ACCURATE SCANNING for ${action.toUpperCase()}... Hold ID card steady in yellow frame`, action === 'in' ? 'success' : 'error');
+        scanning = true;        showMessage(`⚡ FAST SCANNING for ${action.toUpperCase()}... Hold ID card steady in yellow frame`, action === 'in' ? 'success' : 'error');
 
-        // Slower, more accurate scanning - every 500ms for better quality
-        intervalId = setInterval(captureAndScan, 500);
+        // FAST scanning - every 300ms for quick detection
+        intervalId = setInterval(captureAndScan, 300);
         
-        // Start scanning after camera stabilizes
-        setTimeout(captureAndScan, 500);
+        // Start scanning quickly
+        setTimeout(captureAndScan, 100);
 
       } catch (error) {
         showMessage('Camera access denied: ' + error.message, 'error');
         resetToMainPage();
       }
-    }    // Enhanced capture frame and send for scanning with improved accuracy
+    }    // Enhanced capture frame and send for scanning
     let scanAttempts = 0;
-    let consecutiveFailures = 0;
-    let lastSuccessfulScan = null;
-    
     async function captureAndScan() {
-      if (!video.videoWidth || !scanning) return;
-
-      scanAttempts++;
-      
-      // Give more detailed feedback about scanning progress
-      if (scanAttempts <= 3) {
-        showMessage(`🔍 SCANNING... Attempt ${scanAttempts} - Hold ID card steady!`, 'info');
-      } else if (scanAttempts <= 8) {
-        showMessage(`📸 ANALYZING... Attempt ${scanAttempts} - Keep card in yellow frame`, 'info');
-      } else if (scanAttempts <= 15) {
-        showMessage(`🔄 PROCESSING... Attempt ${scanAttempts} - Ensure good lighting`, 'info');
-      } else {
-        showMessage(`⚡ INTENSIVE SCAN... Attempt ${scanAttempts} - Try different angle`, 'info');
-      }
+      if (!video.videoWidth || !scanning) return;      scanAttempts++;
+      showMessage(`⚡ SCAN ${scanAttempts}... ${currentAction.toUpperCase()} mode - Hold ID steady!`, 'info');
 
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
@@ -536,12 +305,11 @@
         const formData = new FormData();
         formData.append('id_card', blob, `scan_${Date.now()}.jpg`);
 
-        try {
-          const res = await fetch('/scan', {
+        try {          const res = await fetch('/scan', {
             method: 'POST',
             body: formData,
-            // Longer timeout for better processing
-            signal: AbortSignal.timeout(8000)  // 8 seconds for thorough extraction
+            // FAST timeout for quick response
+            signal: AbortSignal.timeout(5000)  // 5 seconds for fast extraction
           });
 
           const data = await res.json();
@@ -549,36 +317,26 @@
           if (res.ok && data.success) {
             stopCamera();
             currentNic = data.nic;
-            consecutiveFailures = 0;
-            
-            showMessage(`✅ NIC DETECTED: ${data.nic} (${data.extraction_time}s) - ACCURACY VERIFIED!`, 'success');
-            
-            // Always proceed to NIC capture for both IN and OUT
-            setTimeout(() => startNicCapture(), 1500);
+            showMessage(`✅ NIC detected: ${data.nic} (${data.extraction_time}s)`, 'success');
+            showVerification();
           } else {
-            consecutiveFailures++;
             console.log(`❌ Scan ${scanAttempts}: ${data.message}`);
             
-            // Progressive feedback based on attempts
-            if (scanAttempts >= 20) {
-              showMessage('🤔 Scanning taking long? Try manual entry or improve lighting/angle.', 'info');
-            } else if (scanAttempts >= 15) {
-              showMessage('🔍 Still scanning... Ensure NIC number is clearly visible.', 'info');
-            } else if (scanAttempts >= 10) {
-              showMessage('📱 Continuing scan... Try holding card more steady.', 'info');
+            // Simple feedback for fast scanning
+            if (scanAttempts >= 10) {
+              showMessage('🤔 Having trouble? Try manual entry or better lighting.', 'info');
             } else {
-              showMessage(`🔄 Scanning... ${scanAttempts}/20 attempts`, 'info');
+              showMessage(`🔍 Scanning... Attempt ${scanAttempts}`, 'info');
             }
-          }
-        } catch (err) {
+          }        } catch (err) {
           console.error('Scan error:', err);
           if (err.name === 'TimeoutError') {
-            showMessage(`⏱️ Processing timeout - optimizing for accuracy...`, 'info');
+            showMessage(`⏱️ Processing timeout - trying again...`, 'info');
           } else {
-            showMessage(`🔄 Network issue - retrying for accuracy...`, 'info');
+            showMessage(`🔄 Network issue - retrying scan...`, 'info');
           }
         }
-      }, 'image/jpeg', 0.98);  // Highest quality JPEG for best OCR
+      }, 'image/jpeg', 0.95);  // Higher quality JPEG
     }
 
     // Camera control buttons
@@ -608,9 +366,7 @@
       }
       
       currentNic = nic;
-      
-      // Always go to NIC capture for both IN and OUT actions
-      setTimeout(() => startNicCapture(), 500);
+      showVerification();
     });
 
     cancelManualBtn.addEventListener('click', () => {
@@ -631,50 +387,11 @@
       verifyTitle.textContent = `Verify NIC for ${currentAction.toUpperCase()}`;
       verifyTitle.className = `text-2xl font-bold text-center ${currentAction === 'in' ? 'text-green-600' : 'text-red-600'}`;
       
-      // Show NIC images preview if captured (for IN action only)
-      if (currentAction === 'in' && capturedImages.front && capturedImages.back) {
-        nicImagesPreview.classList.remove('hidden');
-        
-        // Display the actual captured images
-        const frontImagePreview = document.getElementById('frontImagePreview');
-        const backImagePreview = document.getElementById('backImagePreview');
-        
-        // Try to use base64 image data first, fallback to server file paths
-        if (capturedImages.frontImageData) {
-          frontImagePreview.src = capturedImages.frontImageData;
-          frontImagePreview.style.display = 'block';
-        } else if (capturedImages.front) {
-          frontImagePreview.src = `/uploads/${capturedImages.front.replace('uploads/', '')}`;
-          frontImagePreview.style.display = 'block';
-        }
-        
-        if (capturedImages.backImageData) {
-          backImagePreview.src = capturedImages.backImageData;
-          backImagePreview.style.display = 'block';
-        } else if (capturedImages.back) {
-          backImagePreview.src = `/uploads/${capturedImages.back.replace('uploads/', '')}`;
-          backImagePreview.style.display = 'block';
-        }
-        
-        // Add error handlers for image loading
-        frontImagePreview.onerror = function() {
-          console.log('Front image failed to load');
-          this.style.display = 'none';
-        };
-        
-        backImagePreview.onerror = function() {
-          console.log('Back image failed to load');
-          this.style.display = 'none';
-        };
-        
-        showMessage('✅ NIC scanned and images captured! Please verify all details before submitting.', 'success');
+      // Different message for IN vs OUT
+      if (currentAction === 'out') {
+        showMessage('✅ No additional images required for check-out. Please verify the NIC is correct.', 'success');
       } else {
-        nicImagesPreview.classList.add('hidden');
-        if (currentAction === 'in') {
-          showMessage('⚠️ NIC scanned but no images captured. Please verify the NIC is correct.', 'info');
-        } else {
-          showMessage('✅ NIC verified for check-out. Please confirm to submit.', 'info');
-        }
+        showMessage('Please verify the NIC is correct before submitting.', 'info');
       }
       
       scannedNic.textContent = currentNic;
@@ -683,40 +400,66 @@
       showMessage('Submitting to database...', 'info');
       
       try {
-        const requestData = {
-          action: currentAction.toUpperCase(),
-          nic: currentNic,
-          company: currentDepartment,  // Keep as 'company' for backend compatibility
-          department: currentDepartment  // Add department field for display
-        };
-        
-        // Add image paths for IN action
-        if (currentAction === 'in' && capturedImages.front && capturedImages.back) {
-          requestData.front_image_path = capturedImages.front;
-          requestData.back_image_path = capturedImages.back;
-        }
-        
-        const res = await fetch('/record_attendance', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestData)
-        });
+        // For OUT actions, proceed directly without NIC image capture
+        if (currentAction === 'out') {
+          const res = await fetch('/record_attendance', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              action: currentAction.toUpperCase(),
+              nic: currentNic,
+              company: currentCompany,
+              front_image_path: '',  // No images required for OUT
+              back_image_path: ''    // No images required for OUT
+            })
+          });
 
-        const data = await res.json();
+          const data = await res.json();
 
-        if (res.ok && data.status === 'success') {            showSuccess({
+          if (res.ok && data.status === 'success') {
+            showSuccess({
               success: true,
               message: data.message,
               nic: currentNic,
-              department: currentDepartment,
+              company: currentCompany,
               time: data.time,
-            work_hours: data.work_hours,
-            has_images: currentAction === 'in' && capturedImages.front && capturedImages.back
-          });
+              work_hours: data.work_hours
+            });
+          } else {
+            showMessage(data.message || 'Submission failed.', data.status === 'warning' ? 'info' : 'error');
+          }
         } else {
-          showMessage(data.message || 'Submission failed.', data.status === 'warning' ? 'info' : 'error');
+          // For IN actions, proceed without NIC images for now (fast check-in)
+          const res = await fetch('/record_attendance', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              action: currentAction.toUpperCase(),
+              nic: currentNic,
+              company: currentCompany,
+              front_image_path: '',  // Optional for IN - can be added later if needed
+              back_image_path: ''    // Optional for IN - can be added later if needed
+            })
+          });
+
+          const data = await res.json();
+
+          if (res.ok && data.status === 'success') {
+            showSuccess({
+              success: true,
+              message: data.message,
+              nic: currentNic,
+              company: currentCompany,
+              time: data.time,
+              work_hours: data.work_hours
+            });
+          } else {
+            showMessage(data.message || 'Submission failed.', data.status === 'warning' ? 'info' : 'error');
+          }
         }
       } catch (err) {
         console.error('Submit error:', err);
@@ -744,7 +487,7 @@
       
       successMessage.textContent = data.message;
       finalNic.textContent = data.nic;
-      finalDepartment.textContent = data.department || data.company; // Support both for compatibility
+      finalCompany.textContent = data.company;
       finalTime.textContent = data.time;
       
       // Show work hours for OUT actions
@@ -755,13 +498,6 @@
         workHoursDisplay.classList.add('hidden');
       }
       
-      // Show NIC images confirmation for IN actions
-      if (data.has_images) {
-        nicImagesConfirm.classList.remove('hidden');
-      } else {
-        nicImagesConfirm.classList.add('hidden');
-      }
-      
       // Auto return to main page after 8 seconds
       setTimeout(() => {
         resetToMainPage();
@@ -769,354 +505,6 @@
     }
 
     newEntryBtn.addEventListener('click', resetToMainPage);
-
-    // ============ NIC CAPTURE FUNCTIONS ============
-    
-    // Start NIC capture process for both IN and OUT actions
-    async function startNicCapture() {
-      hideAllContainers();
-      nicCaptureContainer.classList.remove('hidden');
-      nicCaptureStep = 'front';
-      capturedImages.timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-      
-      resetProgressIndicators();
-      updateNicCaptureUI();
-      
-      // Display the extracted NIC number
-      nicNumberDisplay.textContent = currentNic;
-      
-      // Update title and instructions based on action
-      if (currentAction === 'in') {
-        nicCaptureTitle.textContent = '📷 Capture NIC Images for Check-in';
-        nicCaptureTitle.className = 'text-2xl font-bold text-center text-green-600';
-        
-        try {
-          nicStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { 
-              facingMode: 'environment',
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            } 
-          });
-          nicVideo.srcObject = nicStream;
-          
-          // Start the cropped preview after video loads
-          nicVideo.addEventListener('loadedmetadata', () => {
-            // No live preview needed
-          });
-          
-          showMessage(`📸 Ready to capture front image for NIC: ${currentNic}`, 'info');
-        } catch (error) {
-          showMessage('Camera access denied: ' + error.message, 'error');
-          showVerification(); // Skip to verification if camera fails
-        }
-      } else {
-        // For OUT action, skip image capture and go directly to verification
-        nicCaptureTitle.textContent = '✅ NIC Verified for Check-out';
-        nicCaptureTitle.className = 'text-2xl font-bold text-center text-red-600';
-        
-        // Hide camera and capture controls for OUT
-        nicVideo.style.display = 'none';
-        captureNicBtn.style.display = 'none';
-        skipNicCaptureBtn.style.display = 'none';
-        document.querySelector('#nicCaptureContainer .relative').style.display = 'none';
-        document.querySelector('#nicCaptureContainer .bg-gray-800').style.display = 'none';
-        document.querySelectorAll('#nicCaptureContainer .text-center')[1].style.display = 'none';
-        
-        showMessage(`✅ NIC ${currentNic} verified for check-out. Proceeding...`, 'success');
-        setTimeout(() => {
-          showVerification();
-        }, 2000);
-      }
-    }
-    
-    // Real-time cropped preview of yellow frame area
-    function startCroppedPreview() {
-      const canvas = document.getElementById('croppedPreview');
-      const placeholder = document.getElementById('previewPlaceholder');
-      const liveIndicator = document.getElementById('liveIndicator');
-      const ctx = canvas.getContext('2d');
-      
-      // Hide placeholder and show canvas
-      if (placeholder) placeholder.style.display = 'none';
-      canvas.style.display = 'block';
-      if (liveIndicator) liveIndicator.style.display = 'block';
-      
-      // Reduce main video opacity to emphasize preview
-      nicVideo.style.opacity = '0.7';
-      
-      // Set canvas dimensions to match yellow frame
-      canvas.width = 224; // w-56 = 224px
-      canvas.height = 320; // h-80 = 320px
-      
-      function updateCroppedPreview() {
-        if (!nicVideo.videoWidth || !nicStream) return;
-        
-        // Calculate the yellow frame area relative to video
-        const videoRect = nicVideo.getBoundingClientRect();
-        const videoWidth = nicVideo.videoWidth;
-        const videoHeight = nicVideo.videoHeight;
-        
-        // Yellow frame dimensions (w-56 h-80 = 224x320px on screen)
-        const frameWidth = 224;
-        const frameHeight = 320;
-        
-        // Calculate crop area in video coordinates
-        const scaleX = videoWidth / videoRect.width;
-        const scaleY = videoHeight / videoRect.height;
-        
-        // Center crop area
-        const cropX = (videoWidth - (frameWidth * scaleX)) / 2;
-        const cropY = (videoHeight - (frameHeight * scaleY)) / 2;
-        const cropWidth = frameWidth * scaleX;
-        const cropHeight = frameHeight * scaleY;
-        
-        // Clear canvas with a subtle background
-        ctx.fillStyle = '#1f2937'; // Gray-800
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        try {
-          // Apply slight sharpening filter for better NIC text visibility
-          ctx.filter = 'contrast(1.1) brightness(1.05) saturate(1.1)';
-          
-          ctx.drawImage(
-            nicVideo,
-            cropX, cropY, cropWidth, cropHeight,  // Source crop area
-            0, 0, canvas.width, canvas.height     // Destination
-          );
-          
-          ctx.filter = 'none'; // Reset filter
-          
-          // Add a subtle border to show it's the focused area
-          ctx.strokeStyle = '#3B82F6';
-          ctx.lineWidth = 3;
-          ctx.strokeRect(1.5, 1.5, canvas.width - 3, canvas.height - 3);
-          
-          // Add corner indicators for better visual feedback
-          ctx.fillStyle = '#3B82F6';
-          const cornerSize = 8;
-          // Top-left corner
-          ctx.fillRect(0, 0, cornerSize * 2, cornerSize);
-          ctx.fillRect(0, 0, cornerSize, cornerSize * 2);
-          // Top-right corner
-          ctx.fillRect(canvas.width - cornerSize * 2, 0, cornerSize * 2, cornerSize);
-          ctx.fillRect(canvas.width - cornerSize, 0, cornerSize, cornerSize * 2);
-          // Bottom-left corner
-          ctx.fillRect(0, canvas.height - cornerSize, cornerSize * 2, cornerSize);
-          ctx.fillRect(0, canvas.height - cornerSize * 2, cornerSize, cornerSize * 2);
-          // Bottom-right corner
-          ctx.fillRect(canvas.width - cornerSize * 2, canvas.height - cornerSize, cornerSize * 2, cornerSize);
-          ctx.fillRect(canvas.width - cornerSize, canvas.height - cornerSize * 2, cornerSize, cornerSize * 2);
-          
-        } catch (e) {
-          // Video not ready yet - show loading state
-          ctx.fillStyle = '#6B7280';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = '#9CA3AF';
-          ctx.font = '16px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('Loading...', canvas.width / 2, canvas.height / 2);
-        }
-        
-        // Continue the preview loop
-        if (nicStream && nicVideo.srcObject) {
-          requestAnimationFrame(updateCroppedPreview);
-        }
-      }
-      
-      // Start the preview loop
-      updateCroppedPreview();
-    }
-    
-    // Stop cropped preview when stream ends
-    function stopCroppedPreview() {
-      const canvas = document.getElementById('croppedPreview');
-      const placeholder = document.getElementById('previewPlaceholder');
-      const liveIndicator = document.getElementById('liveIndicator');
-      
-      if (canvas) {
-        canvas.style.display = 'none';
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-      if (placeholder) placeholder.style.display = 'flex';
-      if (liveIndicator) liveIndicator.style.display = 'none';
-      
-      // Restore main video opacity
-      if (nicVideo) nicVideo.style.opacity = '1';
-    }
-    
-    // Update NIC capture UI based on current step and orientation
-    function updateNicCaptureUI() {
-      const nicGuideFrame = document.getElementById('nicGuideFrame');
-      const nicOrientationGuide = document.getElementById('nicOrientationGuide');
-      const orientationHint = document.getElementById('orientationHint');
-      
-      if (nicCaptureStep === 'front') {
-        // Front: Vertical orientation (portrait)
-        nicGuideFrame.className = 'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-56 h-80 border-4 border-yellow-400 rounded-lg pointer-events-none shadow-lg yellow-frame-focus';
-        nicOrientationGuide.textContent = '📄 FRONT NIC';
-        nicCaptureInstruction.textContent = '📱 Hold NIC FRONT vertically within the yellow frame';
-        if (orientationHint) orientationHint.textContent = '📄 Hold FRONT side vertically (portrait mode)';
-        captureNicBtn.innerHTML = '📸 Capture Front';
-        captureNicBtn.className = 'px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-bold text-lg shadow-lg';
-      } else {
-        // Back: Horizontal orientation (landscape)
-        nicGuideFrame.className = 'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-56 border-4 border-yellow-400 rounded-lg pointer-events-none shadow-lg yellow-frame-focus';
-        nicOrientationGuide.textContent = '📄 BACK NIC';
-        nicCaptureInstruction.textContent = '📱 Hold NIC BACK horizontally within the yellow frame';
-        if (orientationHint) orientationHint.textContent = '📄 Hold BACK side horizontally (landscape mode)';
-        captureNicBtn.innerHTML = '📸 Capture Back';
-        captureNicBtn.className = 'px-8 py-4 bg-green-600 hover:bg-green-700 rounded-xl text-white font-bold text-lg shadow-lg';
-        
-        // Update front progress to completed
-        frontProgress.querySelector('.w-4').className = 'w-4 h-4 bg-green-500 rounded-full';
-      }
-    }
-    
-    // Capture NIC image (front or back) using yellow frame area
-    captureNicBtn.addEventListener('click', async () => {
-      if (!nicStream || !nicVideo.videoWidth) {
-        showMessage('Camera not ready. Please wait...', 'error');
-        return;
-      }
-      
-      showMessage(`📸 Capturing NIC ${nicCaptureStep}...`, 'info');
-      
-      // Disable button temporarily to prevent double captures
-      captureNicBtn.disabled = true;
-      captureNicBtn.innerHTML = '⏳ Processing...';
-      
-      const captureCanvas = document.createElement('canvas');
-      const ctx = captureCanvas.getContext('2d');
-      
-      // Get current frame dimensions based on orientation
-      const nicGuideFrame = document.getElementById('nicGuideFrame');
-      const frameRect = nicGuideFrame.getBoundingClientRect();
-      const videoRect = nicVideo.getBoundingClientRect();
-      
-      // Calculate frame dimensions for full ID card capture
-      let frameWidth, frameHeight;
-      if (nicCaptureStep === 'front') {
-        // Front: Portrait (vertical) - Larger dimensions for full ID card (w-72 h-96 = 288x384px)
-        frameWidth = 288;
-        frameHeight = 384;
-      } else {
-        // Back: Landscape (horizontal) - Larger dimensions for full ID card (w-96 h-72 = 384x288px)
-        frameWidth = 384;
-        frameHeight = 288;
-      }
-      
-      // Set canvas dimensions
-      captureCanvas.width = frameWidth;
-      captureCanvas.height = frameHeight;
-      
-      // Calculate crop area in video coordinates
-      const videoWidth = nicVideo.videoWidth;
-      const videoHeight = nicVideo.videoHeight;
-      
-      const scaleX = videoWidth / videoRect.width;
-      const scaleY = videoHeight / videoRect.height;
-      
-      const cropX = (videoWidth - (frameWidth * scaleX)) / 2;
-      const cropY = (videoHeight - (frameHeight * scaleY)) / 2;
-      const cropWidth = frameWidth * scaleX;
-      const cropHeight = frameHeight * scaleY;
-      
-      // Apply image enhancement for better OCR
-      ctx.filter = 'contrast(1.15) brightness(1.1) saturate(1.05)';
-      
-      // Draw only the yellow frame area to canvas
-      ctx.drawImage(
-        nicVideo,
-        cropX, cropY, cropWidth, cropHeight,
-        0, 0, captureCanvas.width, captureCanvas.height
-      );
-      
-      // Store the image data for preview
-      const imageDataUrl = captureCanvas.toDataURL('image/jpeg', 0.95);
-      capturedImages[`${nicCaptureStep}ImageData`] = imageDataUrl;
-      
-      captureCanvas.toBlob(async (blob) => {
-        try {
-          const formData = new FormData();
-          // Use NIC number as filename instead of timestamp
-          const nicFilename = `${currentNic}_${nicCaptureStep}.jpg`;
-          formData.append('nic_image', blob, nicFilename);
-          formData.append('image_type', nicCaptureStep);
-          formData.append('nic_number', currentNic);
-          formData.append('timestamp', capturedImages.timestamp);
-          
-          const res = await fetch('/save_nic_image', {
-            method: 'POST',
-            body: formData
-          });
-          
-          const data = await res.json();
-          
-          if (res.ok && data.success) {
-            capturedImages[nicCaptureStep] = data.filepath;
-            
-            showMessage(`✅ ${nicCaptureStep.toUpperCase()} image saved as ${data.filename}!`, 'success');
-            
-            if (nicCaptureStep === 'front') {
-              // Move to back capture
-              nicCaptureStep = 'back';
-              updateNicCaptureUI();
-              // Re-enable button for back capture
-              captureNicBtn.disabled = false;
-            } else {
-              // Both images captured, proceed to verification
-              backProgress.querySelector('.w-4').className = 'w-4 h-4 bg-green-500 rounded-full';
-              showMessage('✅ Both NIC images captured! Proceeding to verification...', 'success');
-              
-              // Stop NIC camera
-              if (nicStream) {
-                nicStream.getTracks().forEach(track => track.stop());
-                nicVideo.srcObject = null;
-              }
-              
-              // Wait a moment then show verification
-              setTimeout(() => {
-                showVerification();
-              }, 1500);
-            }
-          } else {
-            showMessage(data.message || `Error capturing ${nicCaptureStep} image`, 'error');
-            // Re-enable button on error
-            captureNicBtn.disabled = false;
-            updateNicCaptureUI();
-          }
-        } catch (error) {
-          console.error('NIC capture error:', error);
-          showMessage(`Error saving ${nicCaptureStep} image: ${error.message}`, 'error');
-          // Re-enable button on error
-          captureNicBtn.disabled = false;
-          updateNicCaptureUI();
-        }
-      }, 'image/jpeg', 0.95);
-    });
-    
-    // Skip NIC capture (for testing or if camera fails)
-    skipNicCaptureBtn.addEventListener('click', () => {
-      if (nicStream) {
-        nicStream.getTracks().forEach(track => track.stop());
-        nicVideo.srcObject = null;
-      }
-      stopCroppedPreview();
-      showMessage('⚠️ NIC capture skipped. Proceeding without images...', 'info');
-      showVerification();
-    });
-    
-    // Cancel NIC capture
-    cancelNicCaptureBtn.addEventListener('click', () => {
-      if (nicStream) {
-        nicStream.getTracks().forEach(track => track.stop());
-        nicVideo.srcObject = null;
-      }
-      stopCroppedPreview();
-      resetToMainPage();
-    });
 
     // Close logout message
     function closeLogoutMessage() {
