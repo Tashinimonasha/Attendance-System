@@ -93,10 +93,10 @@
   <div class="bg-white bg-opacity-95 text-gray-900 rounded-3xl shadow-2xl p-10 max-w-4xl w-full">
       <!-- Step 1: Main IN/OUT buttons -->
     <div id="mainButtons" class="flex flex-col items-center gap-8 mb-8">
-      <!-- Company Selection -->
+      <!-- Department Selection -->
       <div class="flex flex-col items-center space-y-4">
-        <label for="company" class="text-2xl font-bold text-gray-700">Select Your Department:</label>
-        <select name="company" id="company" class="px-6 py-3 text-xl font-semibold border-2 border-gray-300 rounded-xl bg-white shadow-lg focus:outline-none focus:border-blue-500">
+        <label for="department" class="text-2xl font-bold text-gray-700">Select Your Department:</label>
+        <select name="department" id="department" class="px-6 py-3 text-xl font-semibold border-2 border-gray-300 rounded-xl bg-white shadow-lg focus:outline-none focus:border-blue-500">
           <option value="">-- Select Department --</option>
           <option value="PUL">PUL</option>
           <option value="PCL">PCL</option>
@@ -285,7 +285,7 @@
         <p id="successMessage" class="text-xl text-gray-700 mb-6"></p>
         <div class="bg-gray-100 p-4 rounded-lg">
           <p class="text-sm text-gray-600">NIC: <span id="finalNic" class="font-mono font-bold"></span></p>
-          <p class="text-sm text-gray-600">Department: <span id="finalCompany" class="font-bold"></span></p>
+          <p class="text-sm text-gray-600">Department: <span id="finalDepartment" class="font-bold"></span></p>
           <p class="text-sm text-gray-600">Time: <span id="finalTime" class="font-bold"></span></p>
           <p id="workHoursDisplay" class="text-sm text-gray-600 hidden">Work Hours: <span id="finalWorkHours" class="font-bold"></span></p>
           <p id="nicImagesConfirm" class="text-sm text-green-600 hidden">
@@ -305,7 +305,7 @@
     const mainButtons = document.getElementById('mainButtons');
     const btnIn = document.getElementById('btnIn');
     const btnOut = document.getElementById('btnOut');
-    const companySelect = document.getElementById('company');
+    const departmentSelect = document.getElementById('department');
     
     const cameraContainer = document.getElementById('cameraContainer');
     const scanTitle = document.getElementById('scanTitle');
@@ -342,7 +342,7 @@
     const successContainer = document.getElementById('successContainer');
     const successMessage = document.getElementById('successMessage');
     const finalNic = document.getElementById('finalNic');
-    const finalCompany = document.getElementById('finalCompany');
+    const finalDepartment = document.getElementById('finalDepartment');
     const finalTime = document.getElementById('finalTime');
     const finalWorkHours = document.getElementById('finalWorkHours');
     const workHoursDisplay = document.getElementById('workHoursDisplay');
@@ -355,7 +355,7 @@
     let intervalId = null;
     let currentAction = null;
     let currentNic = null;
-    let currentCompany = null;
+    let currentDepartment = null;
     let scanning = false;
     let nicCaptureStep = 'front'; // 'front' or 'back'
     let capturedImages = {
@@ -365,19 +365,19 @@
       backImageData: null,  // Base64 image data for preview
       timestamp: null
     };    // Department selection logic
-    companySelect.addEventListener('change', function() {
-      const selectedCompany = this.value;      if (selectedCompany) {
+    departmentSelect.addEventListener('change', function() {
+      const selectedDepartment = this.value;      if (selectedDepartment) {
         btnIn.disabled = false;
         btnOut.disabled = false;
         btnIn.classList.remove('opacity-50', 'cursor-not-allowed');
         btnOut.classList.remove('opacity-50', 'cursor-not-allowed');
-        currentCompany = selectedCompany;
+        currentDepartment = selectedDepartment;
       } else {
         btnIn.disabled = true;
         btnOut.disabled = true;
         btnIn.classList.add('opacity-50', 'cursor-not-allowed');
         btnOut.classList.add('opacity-50', 'cursor-not-allowed');
-        currentCompany = null;
+        currentDepartment = null;
       }
     });
 
@@ -421,11 +421,11 @@
       mainButtons.classList.remove('hidden');
       currentAction = null;
       currentNic = null;
-      currentCompany = null;
+      currentDepartment = null;
       nicCaptureStep = 'front';
       capturedImages = { front: null, back: null, frontImageData: null, backImageData: null, timestamp: null };
       manualNic.value = '';      
-      companySelect.value = '';
+      departmentSelect.value = '';
       btnIn.disabled = true;
       btnOut.disabled = true;
       btnIn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -686,8 +686,8 @@
         const requestData = {
           action: currentAction.toUpperCase(),
           nic: currentNic,
-          company: currentCompany,  // Keep as 'company' for backend compatibility
-          department: currentCompany  // Add department field for display
+          company: currentDepartment,  // Keep as 'company' for backend compatibility
+          department: currentDepartment  // Add department field for display
         };
         
         // Add image paths for IN action
@@ -706,13 +706,12 @@
 
         const data = await res.json();
 
-        if (res.ok && data.status === 'success') {
-          showSuccess({
-            success: true,
-            message: data.message,
-            nic: currentNic,
-            department: currentCompany,
-            time: data.time,
+        if (res.ok && data.status === 'success') {            showSuccess({
+              success: true,
+              message: data.message,
+              nic: currentNic,
+              department: currentDepartment,
+              time: data.time,
             work_hours: data.work_hours,
             has_images: currentAction === 'in' && capturedImages.front && capturedImages.back
           });
@@ -745,7 +744,7 @@
       
       successMessage.textContent = data.message;
       finalNic.textContent = data.nic;
-      finalCompany.textContent = data.department || data.company; // Support both for compatibility
+      finalDepartment.textContent = data.department || data.company; // Support both for compatibility
       finalTime.textContent = data.time;
       
       // Show work hours for OUT actions
