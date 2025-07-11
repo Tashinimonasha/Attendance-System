@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, make_response
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, make_response, send_from_directory
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta, time
 from PIL import Image, ImageEnhance
@@ -576,25 +576,39 @@ def extract_nic_from_text(text):
     cleaned_text = ''.join(text.replace('\n', ' ').replace('\r', ' ').split()).upper()
     print(f"Cleaned text: {cleaned_text}")
     
-    # Old NIC format: 9 digits + V/X
-    old_nic_match = re.search(r'(\d{9})[VX]', cleaned_text)
-    if old_nic_match:
-        result = old_nic_match.group(0)
-        print(f"✅ Old NIC found: {result}")
-        return result
+    # Old NIC format: 9 digits + V/X (most common)
+    old_nic_patterns = [
+        r'(\d{9})[VX]',           # Standard format
+        r'(\d{2}\d{7})[VX]',      # With potential spacing
+        r'(\d{3}\d{6})[VX]',      # Alternative spacing
+    ]
+    
+    for pattern in old_nic_patterns:
+        match = re.search(pattern, cleaned_text)
+        if match:
+            result = match.group(0)
+            print(f"✅ Old NIC found: {result}")
+            return result
     
     # New NIC format: 12 digits
-    new_nic_match = re.search(r'\b(\d{12})\b', cleaned_text)
-    if new_nic_match:
-        result = new_nic_match.group(1)
-        print(f"✅ New NIC found: {result}")
-        return result
+    new_nic_patterns = [
+        r'\b(\d{12})\b',          # Standard format
+        r'(\d{4}\d{8})',          # With potential spacing
+        r'(\d{6}\d{6})',          # Alternative spacing
+    ]
+    
+    for pattern in new_nic_patterns:
+        match = re.search(pattern, cleaned_text)
+        if match:
+            result = match.group(1)
+            print(f"✅ New NIC found: {result}")
+            return result
     
     print("❌ No NIC pattern found")
     return None
 
 def extract_nic(img_path):
-    """Simple NIC extraction from image"""
+    """Enhanced NIC extraction with multiple processing methods for maximum accuracy"""
     try:
         print(f"🔍 Processing image: {img_path}")
         img = Image.open(img_path)
@@ -603,23 +617,62 @@ def extract_nic(img_path):
         if img.mode != 'RGB':
             img = img.convert('RGB')
         
-        # Enhance image for better OCR
-        enhanced_img = ImageEnhance.Contrast(img).enhance(2.0)
-        enhanced_img = ImageEnhance.Sharpness(enhanced_img).enhance(1.5)
-        enhanced_img = enhanced_img.convert('L')  # Convert to grayscale
+        # Try multiple OCR configurations for best results
+        ocr_configs = [
+            # High-quality OCR for crisp text
+            '--psm 6 -c tessedit_char_whitelist=0123456789VXvx --dpi 300',
+            # Alternative PSM for different text layouts
+            '--psm 8 -c tessedit_char_whitelist=0123456789VXvx --dpi 300',
+            # Single text line mode
+            '--psm 7 -c tessedit_char_whitelist=0123456789VXvx --dpi 300',
+            # Raw line mode
+            '--psm 13 -c tessedit_char_whitelist=0123456789VXvx --dpi 300',
+        ]
         
-        # Extract text using Tesseract
-        text = pytesseract.image_to_string(enhanced_img, 
-            config='--psm 6 -c tessedit_char_whitelist=0123456789VXvx --dpi 200')
+        # Try different image processing methods
+        processing_methods = [
+            # Method 1: High contrast + sharpness
+            lambda img: ImageEnhance.Sharpness(ImageEnhance.Contrast(img).enhance(2.5)).enhance(2.0).convert('L'),
+            # Method 2: Moderate enhancement
+            lambda img: ImageEnhance.Contrast(ImageEnhance.Sharpness(img).enhance(1.5)).enhance(1.8).convert('L'),
+            # Method 3: Simple grayscale
+            lambda img: img.convert('L'),
+            # Method 4: Heavy contrast
+            lambda img: ImageEnhance.Contrast(img.convert('L')).enhance(3.0),
+        ]
         
-        print(f"OCR Text: {text.strip()}")
+        # Try each combination of processing method and OCR config
+        for i, process_method in enumerate(processing_methods):
+            try:
+                processed_img = process_method(img)
+                
+                for j, config in enumerate(ocr_configs):
+                    try:
+                        print(f"🔄 Attempt {i+1}.{j+1}: Processing method {i+1}, OCR config {j+1}")
+                        
+                        # Extract text using current configuration
+                        text = pytesseract.image_to_string(processed_img, config=config)
+                        print(f"OCR Text: '{text.strip()}'")
+                        
+                        # Extract NIC from text
+                        nic = extract_nic_from_text(text)
+                        if nic:
+                            print(f"✅ NIC successfully extracted: {nic}")
+                            return nic
+                            
+                    except Exception as ocr_error:
+                        print(f"⚠️ OCR config {j+1} failed: {ocr_error}")
+                        continue
+                        
+            except Exception as process_error:
+                print(f"⚠️ Processing method {i+1} failed: {process_error}")
+                continue
         
-        # Extract NIC from text
-        nic = extract_nic_from_text(text)
-        return nic
+        print("❌ All extraction methods failed")
+        return None
         
     except Exception as e:
-        print(f"❌ OCR error: {e}")
+        print(f"❌ Critical OCR error: {e}")
         return None
 
 @app.route('/')
@@ -670,19 +723,117 @@ def scan():
             "message": f"Error processing image: {str(e)}"
         }), 500
 
+@app.route('/capture_nic_images', methods=['POST'])
+def capture_nic_images():
+    """Capture NIC front and back images for attendance"""
+    try:
+        data = request.get_json()
+        action = data.get('action', '').upper()
+        
+        if action != 'IN':
+            return jsonify({
+                "success": False,
+                "message": "NIC capture is only required for IN action"
+            }), 400
+        
+        # Generate timestamp for unique filenames
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        return jsonify({
+            "success": True,
+            "message": "Ready to capture NIC images",
+            "timestamp": timestamp,
+            "step": "front"
+        })
+        
+    except Exception as e:
+        print(f"NIC capture error: {e}")
+        return jsonify({
+            "success": False,
+            "message": f"Error: {str(e)}"
+        }), 500
+
+@app.route('/save_nic_image', methods=['POST'])
+def save_nic_image():
+    """Save captured NIC image (front or back)"""
+    try:
+        if 'nic_image' not in request.files:
+            return jsonify({"success": False, "message": "No image uploaded"}), 400
+        
+        file = request.files['nic_image']
+        image_type = request.form.get('image_type', 'front')  # 'front' or 'back'
+        timestamp = request.form.get('timestamp', datetime.now().strftime("%Y%m%d_%H%M%S"))
+        
+        if file.filename == '':
+            return jsonify({"success": False, "message": "No file selected"}), 400
+        
+        # Create directories if they don't exist
+        front_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'front')
+        back_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'back')
+        os.makedirs(front_dir, exist_ok=True)
+        os.makedirs(back_dir, exist_ok=True)
+        
+        # Generate filename
+        if image_type == 'front':
+            filename = f"front_{timestamp}.jpg"
+            filepath = os.path.join(front_dir, filename)
+        else:
+            filename = f"back_{timestamp}.jpg"
+            filepath = os.path.join(back_dir, filename)
+        
+        # Save the image
+        file.save(filepath)
+        
+        # Only extract NIC from front image if we don't have current NIC in session
+        # Since we now extract NIC first, we don't need to re-extract
+        nic_number = None
+        if image_type == 'front':
+            # Optionally extract NIC for verification, but don't require it
+            try:
+                nic_number = extract_nic(filepath)
+            except Exception as e:
+                print(f"NIC extraction from front image failed: {e}")
+                # Continue without error since we already have NIC
+        
+        return jsonify({
+            "success": True,
+            "message": f"NIC {image_type} image saved successfully",
+            "filename": filename,
+            "filepath": filepath,
+            "nic_number": nic_number if image_type == 'front' else None,
+            "image_type": image_type,
+            "timestamp": timestamp
+        })
+        
+    except Exception as e:
+        print(f"Save NIC image error: {e}")
+        return jsonify({
+            "success": False,
+            "message": f"Error saving image: {str(e)}"
+        }), 500
+
 @app.route('/record_attendance', methods=['POST'])
 def record_attendance():
-    """Record attendance to database"""
+    """Record attendance to database with NIC images"""
     try:
         data = request.get_json()
         action = data.get('action', '').upper()
         nic = data.get('nic', '').strip()
         company = data.get('company', '').strip()
+        front_image_path = data.get('front_image_path', '')
+        back_image_path = data.get('back_image_path', '')
         
         if not all([action, nic, company]):
             return jsonify({
                 "status": "error",
                 "message": "Missing required fields"
+            }), 400
+        
+        # For IN action, validate that image paths are provided
+        if action == 'IN' and (not front_image_path or not back_image_path):
+            return jsonify({
+                "status": "error",
+                "message": "NIC front and back images are required for check-in"
             }), 400
         
         if not db or not cursor:
@@ -716,14 +867,16 @@ def record_attendance():
             shift = get_shift_from_time(now)
             
             cursor.execute(
-                "INSERT INTO AttendanceRecords (NIC, Date, InTime, Shift, Status, Company) VALUES (%s, %s, %s, %s, %s, %s)", 
-                (nic, today, now, shift, 'Check in', db_company)
+                """INSERT INTO AttendanceRecords 
+                   (NIC, Date, InTime, Shift, Status, Company, FrontNICImage, BackNICImage) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""", 
+                (nic, today, now, shift, 'Check in', db_company, front_image_path, back_image_path)
             )
             db.commit()
             
             return jsonify({
                 "status": "success",
-                "message": f"✅ IN recorded for {nic} at {company}",
+                "message": f"✅ IN recorded for {nic} at {company} with NIC images",
                 "time": now.strftime("%H:%M:%S")
             })
             
