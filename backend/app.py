@@ -197,37 +197,8 @@ def populate_sample_data():
                 ('22:00:00', '07:00:00'),
                 ('23:00:00', '08:00:00'),
                 ('00:00:00', '09:00:00')
-            ],
-            'Early Morning': [
-                ('06:00:00', '15:00:00'),
-                ('06:30:00', '15:30:00'),
-                ('07:00:00', '16:00:00')
-            ],
-            'Late Morning': [
-                ('10:00:00', '19:00:00'),
-                ('10:30:00', '19:30:00'),
-                ('11:00:00', '20:00:00')
-            ],
-            'Flexible Shift': [
-                ('11:00:00', '20:00:00'),
-                ('12:00:00', '21:00:00'),
-                ('13:00:00', '22:00:00')
-            ],
-            'Production Shift': [
-                ('06:00:00', '14:00:00'),
-                ('14:00:00', '22:00:00'),
-                ('22:00:00', '06:00:00')
-            ],
-            'Security Shift': [
-                ('00:00:00', '08:00:00'),
-                ('08:00:00', '16:00:00'),
-                ('16:00:00', '00:00:00')
-            ],
-            'Weekend Shift': [
-                ('12:00:00', '21:00:00'),
-                ('14:00:00', '23:00:00'),
-                ('16:00:00', '01:00:00')
-            ]
+            ]  
+             
         }
         
         # Generate data from start_date to today
@@ -373,8 +344,38 @@ def populate_sample_data():
     except Exception as e:
         print(f"❌ Error populating sample data: {e}")
 
-# Populate sample data on startup
-populate_sample_data()
+def delete_today_data():
+    """Delete all attendance data for today (2025-07-12)"""
+    try:
+        # Connect to database
+        connection = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="Tashini258258",
+            database="AttendanceDB"
+        )
+        cursor = connection.cursor()
+        
+        today = '2025-07-12'
+        
+        # Delete today's attendance records
+        cursor.execute("DELETE FROM AttendanceRecords WHERE Date = %s", (today,))
+        deleted_count = cursor.rowcount
+        
+        connection.commit()
+        cursor.close()
+        connection.close()
+        
+        print(f"✅ Deleted {deleted_count} attendance records for {today}")
+        
+    except Exception as e:
+        print(f"❌ Error deleting today's data: {e}")
+
+# Delete today's data on startup
+delete_today_data()
+
+# Populate sample data on startup - DISABLED 
+# populate_sample_data()  # Commented out to prevent automatic data generation
 
 app = Flask(__name__)
 app.secret_key = 'printcare_admin_secret_key_2025'
@@ -1065,7 +1066,8 @@ def admin_reports():
         if report_type == 'daily':
             # Get last 7 days attendance
             cursor.execute("""
-                SELECT DATE(time) as date, COUNT(DISTINCT nic) as attendance_count
+                SELECT 
+                    DATE(time) as date, COUNT(DISTINCT nic) as attendance_count
                 FROM attendance 
                 WHERE DATE(time) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
                 GROUP BY DATE(time) 

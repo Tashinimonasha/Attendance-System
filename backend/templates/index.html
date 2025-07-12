@@ -136,7 +136,58 @@
           📷 Rescan
         </button>
       </div>
-    </div>    <!-- Step 5: Success message -->
+    </div>
+
+    <!-- Step 5: NIC Image Capture (for IN actions only) -->
+    <div id="nicCaptureContainer" class="hidden flex flex-col items-center space-y-6">
+      <h3 class="text-2xl font-bold text-center text-blue-600">📸 Capture NIC Images</h3>
+      
+      <!-- Camera preview for NIC capture -->
+      <div class="relative">
+        <video id="nicCameraPreview" class="w-80 h-60 border-2 border-blue-300 rounded-lg bg-black hidden" autoplay muted playsinline></video>
+        <canvas id="nicCaptureCanvas" class="hidden"></canvas>
+      </div>
+      
+      <!-- Image capture status -->
+      <div id="nicCaptureStatus" class="text-center">
+        <p id="nicCaptureInstruction" class="text-lg font-semibold text-gray-700 mb-4">
+          Step 1: Capture Front Side of NIC
+        </p>
+        <p class="text-sm text-gray-600 mb-4">Position your NIC card clearly in the camera view</p>
+      </div>
+      
+      <!-- Captured images preview -->
+      <div id="nicImagesPreview" class="flex gap-4 hidden">
+        <div class="text-center">
+          <p class="text-sm font-semibold text-gray-600 mb-2">Front Side</p>
+          <img id="frontImagePreview" class="w-32 h-24 border rounded-lg object-cover" />
+        </div>
+        <div class="text-center">
+          <p class="text-sm font-semibold text-gray-600 mb-2">Back Side</p>
+          <img id="backImagePreview" class="w-32 h-24 border rounded-lg object-cover" />
+        </div>
+      </div>
+      
+      <!-- Action buttons -->
+      <div class="flex gap-4">
+        <button id="captureNicBtn" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold">
+          📷 Capture Image
+        </button>
+        <button id="retakeNicBtn" class="px-8 py-3 bg-orange-500 hover:bg-orange-600 rounded-lg text-white font-semibold hidden">
+          🔄 Retake
+        </button>
+        <button id="proceedWithoutImagesBtn" class="px-8 py-3 bg-gray-500 hover:bg-gray-600 rounded-lg text-white font-semibold">
+          ⏭️ Skip Images
+        </button>
+      </div>
+      
+      <!-- Continue button (shown after both images captured) -->
+      <button id="continueAfterCaptureBtn" class="px-12 py-4 bg-green-600 hover:bg-green-700 rounded-xl text-white font-bold text-xl shadow-lg hidden">
+        ✅ Continue with Images
+      </button>
+    </div>
+
+    <!-- Step 6: Success message -->
     <div id="successContainer" class="hidden flex flex-col items-center space-y-4">
       <div class="text-center">
         <div class="text-6xl mb-4">🎉</div>
@@ -190,13 +241,34 @@
     const workHoursDisplay = document.getElementById('workHoursDisplay');
     const newEntryBtn = document.getElementById('newEntryBtn');
     
+    // NIC capture elements
+    const nicCaptureContainer = document.getElementById('nicCaptureContainer');
+    const nicCameraPreview = document.getElementById('nicCameraPreview');
+    const nicCaptureCanvas = document.getElementById('nicCaptureCanvas');
+    const nicCaptureInstruction = document.getElementById('nicCaptureInstruction');
+    const nicImagesPreview = document.getElementById('nicImagesPreview');
+    const frontImagePreview = document.getElementById('frontImagePreview');
+    const backImagePreview = document.getElementById('backImagePreview');
+    const captureNicBtn = document.getElementById('captureNicBtn');
+    const retakeNicBtn = document.getElementById('retakeNicBtn');
+    const proceedWithoutImagesBtn = document.getElementById('proceedWithoutImagesBtn');
+    const continueAfterCaptureBtn = document.getElementById('continueAfterCaptureBtn');
+    
     const messageDiv = document.getElementById('message');    // State variables
     let stream = null;
     let intervalId = null;
     let currentAction = null;
     let currentNic = null;
     let currentCompany = null;
-    let scanning = false;    // Company selection logic
+    let scanning = false;
+    
+    // NIC capture state variables
+    let nicCameraStream = null;
+    let capturedFrontImage = null;
+    let capturedBackImage = null;
+    let currentCaptureStep = 'front'; // 'front' or 'back'
+    let frontImagePath = '';
+    let backImagePath = '';    // Company selection logic
     companySelect.addEventListener('change', function() {
       const selectedCompany = this.value;      if (selectedCompany) {
         btnIn.disabled = false;
@@ -219,6 +291,7 @@
       cameraContainer.classList.add('hidden');
       manualEntryContainer.classList.add('hidden');
       verificationContainer.classList.add('hidden');
+      nicCaptureContainer.classList.add('hidden');
       successContainer.classList.add('hidden');
       messageDiv.textContent = '';
       messageDiv.className = 'mt-8 text-center text-lg font-semibold min-h-[3rem]';
@@ -431,35 +504,8 @@
             showMessage(data.message || 'Submission failed.', data.status === 'warning' ? 'info' : 'error');
           }
         } else {
-          // For IN actions, proceed without NIC images for now (fast check-in)
-          const res = await fetch('/record_attendance', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              action: currentAction.toUpperCase(),
-              nic: currentNic,
-              company: currentCompany,
-              front_image_path: '',  // Optional for IN - can be added later if needed
-              back_image_path: ''    // Optional for IN - can be added later if needed
-            })
-          });
-
-          const data = await res.json();
-
-          if (res.ok && data.status === 'success') {
-            showSuccess({
-              success: true,
-              message: data.message,
-              nic: currentNic,
-              company: currentCompany,
-              time: data.time,
-              work_hours: data.work_hours
-            });
-          } else {
-            showMessage(data.message || 'Submission failed.', data.status === 'warning' ? 'info' : 'error');
-          }
+          // For IN actions, proceed to NIC image capture
+          showNICCapture();
         }
       } catch (err) {
         console.error('Submit error:', err);
@@ -530,6 +576,263 @@
           }, 500);
         }, 5000);
       }
+    });
+
+    // ========== NIC IMAGE CAPTURE FUNCTIONS ==========
+    
+    function showNICCapture() {
+      hideAllContainers();
+      nicCaptureContainer.classList.remove('hidden');
+      
+      // Reset capture state
+      currentCaptureStep = 'front';
+      capturedFrontImage = null;
+      capturedBackImage = null;
+      frontImagePath = '';
+      backImagePath = '';
+      
+      // Reset UI
+      nicImagesPreview.classList.add('hidden');
+      continueAfterCaptureBtn.classList.add('hidden');
+      retakeNicBtn.classList.add('hidden');
+      captureNicBtn.classList.remove('hidden');
+      
+      updateCaptureInstruction();
+      initializeNICCamera();
+    }
+    
+    async function initializeNICCamera() {
+      try {
+        if (nicCameraStream) {
+          nicCameraStream.getTracks().forEach(track => track.stop());
+        }
+        
+        nicCameraStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: 'environment'
+          }
+        });
+        
+        nicCameraPreview.srcObject = nicCameraStream;
+        nicCameraPreview.classList.remove('hidden');
+        showMessage('📸 Camera ready for NIC capture', 'success');
+        
+      } catch (error) {
+        console.error('Camera access error:', error);
+        showMessage('❌ Camera access failed. You can proceed without images.', 'error');
+      }
+    }
+    
+    function updateCaptureInstruction() {
+      if (currentCaptureStep === 'front') {
+        nicCaptureInstruction.textContent = 'Step 1: Capture Front Side of NIC';
+        captureNicBtn.innerHTML = '📷 Capture Front';
+      } else {
+        nicCaptureInstruction.textContent = 'Step 2: Capture Back Side of NIC';
+        captureNicBtn.innerHTML = '📷 Capture Back';
+      }
+    }
+    
+    function stopNICCamera() {
+      if (nicCameraStream) {
+        nicCameraStream.getTracks().forEach(track => track.stop());
+        nicCameraStream = null;
+      }
+      nicCameraPreview.classList.add('hidden');
+    }
+    
+    async function captureNICImage() {
+      if (!nicCameraStream) {
+        showMessage('❌ Camera not available', 'error');
+        return;
+      }
+      
+      try {
+        const canvas = nicCaptureCanvas;
+        const context = canvas.getContext('2d');
+        
+        canvas.width = nicCameraPreview.videoWidth;
+        canvas.height = nicCameraPreview.videoHeight;
+        
+        context.drawImage(nicCameraPreview, 0, 0);
+        
+        // Convert to blob
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            await saveNICImage(blob, currentCaptureStep);
+          }
+        }, 'image/jpeg', 0.8);
+        
+      } catch (error) {
+        console.error('Image capture error:', error);
+        showMessage('❌ Failed to capture image', 'error');
+      }
+    }
+    
+    async function saveNICImage(imageBlob, imageType) {
+      try {
+        showMessage(`💾 Saving ${imageType} image...`, 'info');
+        
+        const formData = new FormData();
+        formData.append('nic_image', imageBlob, `${currentNic}_${imageType}.jpg`);
+        formData.append('image_type', imageType);
+        formData.append('nic_number', currentNic);
+        formData.append('timestamp', Date.now().toString());
+        
+        const response = await fetch('/save_nic_image', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Store image paths
+          if (imageType === 'front') {
+            capturedFrontImage = imageBlob;
+            frontImagePath = data.filepath;
+            frontImagePreview.src = URL.createObjectURL(imageBlob);
+          } else {
+            capturedBackImage = imageBlob;
+            backImagePath = data.filepath;
+            backImagePreview.src = URL.createObjectURL(imageBlob);
+          }
+          
+          showMessage(`✅ ${imageType.charAt(0).toUpperCase() + imageType.slice(1)} image saved successfully`, 'success');
+          
+          // Move to next step
+          if (currentCaptureStep === 'front') {
+            currentCaptureStep = 'back';
+            updateCaptureInstruction();
+            nicImagesPreview.classList.remove('hidden');
+          } else {
+            // Both images captured
+            stopNICCamera();
+            nicImagesPreview.classList.remove('hidden');
+            captureNicBtn.classList.add('hidden');
+            continueAfterCaptureBtn.classList.remove('hidden');
+            retakeNicBtn.classList.remove('hidden');
+            showMessage('✅ Both NIC images captured successfully!', 'success');
+          }
+          
+        } else {
+          showMessage(`❌ Failed to save ${imageType} image: ${data.message}`, 'error');
+        }
+        
+      } catch (error) {
+        console.error('Save image error:', error);
+        showMessage(`❌ Error saving ${imageType} image`, 'error');
+      }
+    }
+    
+    async function submitAttendanceWithImages() {
+      try {
+        showMessage('📝 Submitting attendance with NIC images...', 'info');
+        
+        const response = await fetch('/record_attendance', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: currentAction.toUpperCase(),
+            nic: currentNic,
+            company: currentCompany,
+            front_image_path: frontImagePath,
+            back_image_path: backImagePath
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.status === 'success') {
+          stopNICCamera();
+          showSuccess({
+            success: true,
+            message: data.message,
+            nic: currentNic,
+            company: currentCompany,
+            time: data.time
+          });
+        } else {
+          showMessage(data.message || 'Submission failed.', 'error');
+        }
+        
+      } catch (error) {
+        console.error('Submit attendance error:', error);
+        showMessage('❌ Error submitting attendance', 'error');
+      }
+    }
+    
+    async function submitAttendanceWithoutImages() {
+      try {
+        showMessage('📝 Submitting attendance without images...', 'info');
+        
+        const response = await fetch('/record_attendance', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: currentAction.toUpperCase(),
+            nic: currentNic,
+            company: currentCompany,
+            front_image_path: '',
+            back_image_path: ''
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.status === 'success') {
+          stopNICCamera();
+          showSuccess({
+            success: true,
+            message: data.message,
+            nic: currentNic,
+            company: currentCompany,
+            time: data.time
+          });
+        } else {
+          showMessage(data.message || 'Submission failed.', 'error');
+        }
+        
+      } catch (error) {
+        console.error('Submit attendance error:', error);
+        showMessage('❌ Error submitting attendance', 'error');
+      }
+    }
+    
+    // ========== NIC CAPTURE EVENT LISTENERS ==========
+    
+    captureNicBtn.addEventListener('click', captureNICImage);
+    
+    retakeNicBtn.addEventListener('click', () => {
+      // Reset and restart capture process
+      currentCaptureStep = 'front';
+      capturedFrontImage = null;
+      capturedBackImage = null;
+      frontImagePath = '';
+      backImagePath = '';
+      
+      nicImagesPreview.classList.add('hidden');
+      continueAfterCaptureBtn.classList.add('hidden');
+      retakeNicBtn.classList.add('hidden');
+      captureNicBtn.classList.remove('hidden');
+      
+      updateCaptureInstruction();
+      initializeNICCamera();
+    });
+    
+    proceedWithoutImagesBtn.addEventListener('click', () => {
+      stopNICCamera();
+      submitAttendanceWithoutImages();
+    });
+    
+    continueAfterCaptureBtn.addEventListener('click', () => {
+      submitAttendanceWithImages();
     });
 
   </script>
