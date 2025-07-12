@@ -833,23 +833,20 @@ def record_attendance():
                 "message": "Missing required fields"
             }), 400
         
-        # For IN action, validate that image paths are provided (optional - can be empty for fast check-in)
-        # Images are only required if specifically requested
-        # if action == 'IN' and (not front_image_path or not back_image_path):
-        #     return jsonify({
-        #         "status": "error",
-        #         "message": "NIC front and back images are required for check-in"
-        #     }), 400
-        
-        if not db or not cursor:
+        # Use fresh database connection to avoid stale connections
+        connection = get_db_connection()
+        if not connection:
             return jsonify({
-                "status": "success", 
-                "message": f"✅ {action} recorded for {nic} at {company} (Demo Mode - DB not connected)",
-                "time": datetime.now().strftime("%H:%M:%S")
-            })
+                "status": "error", 
+                "message": "Database connection failed"
+            }), 500
+            
+        cursor = connection.cursor()
         
         today = datetime.today().date()
         now = datetime.now().time()
+        
+        print(f"🔍 DEBUG: Processing {action} for NIC {nic} on {today} at {now}")
         
         # Map company names to database ENUM values
         company_mapping = {
@@ -886,7 +883,7 @@ def record_attendance():
                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""", 
                 (nic, today, now, shift, 'Check in', db_company, front_img, back_img)
             )
-            db.commit()
+            connection.commit()
             
             return jsonify({
                 "status": "success",
@@ -895,28 +892,54 @@ def record_attendance():
             })
             
         elif action == 'OUT':
-            # Find matching IN record
+            # First, let's check if there are ANY records for this NIC today
             cursor.execute("""
-                SELECT ID, InTime FROM AttendanceRecords
-                WHERE NIC = %s AND Date = %s AND OutTime IS NULL
-                ORDER BY InTime DESC LIMIT 1
+                SELECT ID, InTime, OutTime, Status FROM AttendanceRecords
+                WHERE NIC = %s AND Date = %s
+                ORDER BY InTime DESC
             """, (nic, today))
             
-            row = cursor.fetchone()
-            if not row:
+            all_records = cursor.fetchall()
+            print(f"🔍 DEBUG: Found {len(all_records)} records for NIC {nic} on {today}")
+            
+            if not all_records:
                 return jsonify({
                     "status": "warning",
-                    "message": f"⚠️ No IN record found for {nic} today"
+                    "message": f"⚠️ No attendance records found for {nic} today"
                 })
             
-            record_id, in_time = row
+            # Look for the most recent IN record without OUT time
+            latest_incomplete = None
+            for record in all_records:
+                record_id, in_time, out_time, status = record
+                print(f"🔍 DEBUG: Record ID {record_id}: IN={in_time}, OUT={out_time}, Status={status}")
+                if out_time is None:  # This record hasn't been checked out yet
+                    latest_incomplete = record
+                    break
+            
+            if not latest_incomplete:
+                # Check if there's already a completed record today
+                if all_records:
+                    return jsonify({
+                        "status": "warning", 
+                        "message": f"⚠️ {nic} has already checked out today. Latest record is completed."
+                    })
+                else:
+                    return jsonify({
+                        "status": "warning",
+                        "message": f"⚠️ No incomplete IN record found for {nic} today"
+                    })
+            
+            record_id, in_time, out_time, status = latest_incomplete
+            print(f"✅ DEBUG: Updating record ID {record_id} with OUT time")
             
             # Update with OUT time and status
             cursor.execute(
                 "UPDATE AttendanceRecords SET OutTime = %s, Status = %s WHERE ID = %s", 
                 (now, 'Completed', record_id)
             )
-            db.commit()
+            connection.commit()
+            print(f"✅ DEBUG: Record updated successfully")
             
             # Calculate work hours
             if isinstance(in_time, timedelta):
@@ -948,6 +971,15 @@ def record_attendance():
             "status": "error",
             "message": f"Database error: {str(e)}"
         }), 500
+    finally:
+        # Always close the database connection
+        try:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'connection' in locals():
+                connection.close()
+        except:
+            pass
 
 @app.route('/admin')
 def admin_login():
