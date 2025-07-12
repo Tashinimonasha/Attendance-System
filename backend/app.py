@@ -371,8 +371,8 @@ def delete_today_data():
     except Exception as e:
         print(f"❌ Error deleting today's data: {e}")
 
-# Delete today's data on startup
-delete_today_data()
+# Delete today's data on startup - DISABLED to preserve user data
+# delete_today_data()  # Commented out to prevent automatic deletion of attendance records
 
 # Populate sample data on startup - DISABLED 
 # populate_sample_data()  # Commented out to prevent automatic data generation
