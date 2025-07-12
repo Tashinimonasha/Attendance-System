@@ -870,6 +870,14 @@ def record_attendance():
         db_company = company_mapping.get(company, company if company in ['PUL', 'PCL', 'PPM', 'PDSL'] else 'PUL')  # Default to PUL
         
         if action == 'IN':
+            # Check if this is a first-time user
+            cursor.execute("""
+                SELECT COUNT(*) FROM AttendanceRecords WHERE NIC = %s
+            """, (nic,))
+            
+            total_records = cursor.fetchone()[0]
+            is_first_time = total_records == 0
+            
             # Calculate shift from time
             shift = get_shift_from_time(now)
             
@@ -885,10 +893,17 @@ def record_attendance():
             )
             connection.commit()
             
+            # Prepare success message based on first-time status
+            if is_first_time:
+                message = f"🎉 Welcome to Printcare! Today is your first day. IN recorded for {nic} at Department {company}"
+            else:
+                message = f"✅ Welcome back! IN recorded for {nic} at Department {company}"
+            
             return jsonify({
                 "status": "success",
-                "message": f"✅ IN recorded for {nic} at Department {company}",
-                "time": now.strftime("%H:%M:%S")
+                "message": message,
+                "time": now.strftime("%H:%M:%S"),
+                "is_first_time": is_first_time
             })
             
         elif action == 'OUT':
@@ -1855,6 +1870,93 @@ def check_auth():
 def open_browser():
     """Open browser after server starts"""
     threading.Timer(1.5, lambda: webbrowser.open('http://127.0.0.1:5001')).start()
+
+@app.route('/check_nic_status', methods=['POST'])
+def check_nic_status():
+    """Check if NIC user is first-time or returning user"""
+    try:
+        data = request.get_json()
+        nic = data.get('nic', '').strip()
+        action = data.get('action', '').upper()
+        
+        if not nic or not action:
+            return jsonify({
+                "success": False,
+                "message": "NIC and action are required"
+            }), 400
+        
+        # For OUT actions, never need images
+        if action == 'OUT':
+            return jsonify({
+                "success": True,
+                "is_first_time": False,
+                "needs_images": False,
+                "message": "OUT action - no images needed"
+            })
+        
+        # For IN actions, check if user exists in database
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({
+                "success": False,
+                "message": "Database connection failed"
+            }), 500
+            
+        cursor = connection.cursor()
+        
+        # Check if this NIC has any previous records with images
+        cursor.execute("""
+            SELECT COUNT(*) as record_count,
+                   COUNT(CASE WHEN FrontNICImage IS NOT NULL AND FrontNICImage != '' THEN 1 END) as with_front,
+                   COUNT(CASE WHEN BackNICImage IS NOT NULL AND BackNICImage != '' THEN 1 END) as with_back
+            FROM AttendanceRecords 
+            WHERE NIC = %s
+        """, (nic,))
+        
+        result = cursor.fetchone()
+        record_count, front_count, back_count = result
+        
+        # Check if NIC images exist on disk
+        front_image_exists = False
+        back_image_exists = False
+        
+        front_path = os.path.join(app.config['UPLOAD_FOLDER'], 'front', f"{nic}_front.jpg")
+        back_path = os.path.join(app.config['UPLOAD_FOLDER'], 'back', f"{nic}_back.jpg")
+        
+        if os.path.exists(front_path):
+            front_image_exists = True
+        if os.path.exists(back_path):
+            back_image_exists = True
+        
+        # Determine if images are needed
+        has_complete_images = (front_count > 0 and back_count > 0) or (front_image_exists and back_image_exists)
+        is_first_time = record_count == 0
+        needs_images = not has_complete_images
+        
+        print(f"🔍 NIC Status Check for {nic}:")
+        print(f"   Records: {record_count}, Front: {front_count}, Back: {back_count}")
+        print(f"   Front file exists: {front_image_exists}, Back file exists: {back_image_exists}")
+        print(f"   Is first time: {is_first_time}, Needs images: {needs_images}")
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            "success": True,
+            "is_first_time": is_first_time,
+            "needs_images": needs_images,
+            "has_front_image": front_image_exists or front_count > 0,
+            "has_back_image": back_image_exists or back_count > 0,
+            "total_records": record_count,
+            "message": "First time user - images required" if needs_images else "Returning user - no images needed"
+        })
+        
+    except Exception as e:
+        print(f"❌ Error checking NIC status: {e}")
+        return jsonify({
+            "success": False,
+            "message": f"Error: {str(e)}"
+        }), 500
 
 if __name__ == '__main__':
     print("🚀 ATTENDANCE SYSTEM STARTING...")

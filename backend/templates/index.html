@@ -470,11 +470,32 @@
       scannedNic.textContent = currentNic;
     }    // Verification button handlers
     submitBtn.addEventListener('click', async () => {
-      showMessage('Submitting to database...', 'info');
+      showMessage('Checking NIC status...', 'info');
       
       try {
+        // First, check if this NIC needs images (for IN actions)
+        const statusRes = await fetch('/check_nic_status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            nic: currentNic,
+            action: currentAction
+          })
+        });
+        
+        const statusData = await statusRes.json();
+        
+        if (!statusData.success) {
+          showMessage(`❌ Error checking NIC status: ${statusData.message}`, 'error');
+          return;
+        }
+        
         // For OUT actions, proceed directly without NIC image capture
         if (currentAction === 'out') {
+          showMessage('Submitting check-out...', 'info');
+          
           const res = await fetch('/record_attendance', {
             method: 'POST',
             headers: {
@@ -504,8 +525,48 @@
             showMessage(data.message || 'Submission failed.', data.status === 'warning' ? 'info' : 'error');
           }
         } else {
-          // For IN actions, proceed to NIC image capture
-          showNICCapture();
+          // For IN actions, check if images are needed
+          if (statusData.needs_images) {
+            // First-time user or user without complete images - go to capture
+            if (statusData.is_first_time) {
+              showMessage('🎉 Welcome to Printcare! Please capture your NIC images for your first check-in.', 'info');
+            } else {
+              showMessage('📸 NIC images needed for check-in. Please capture front and back images.', 'info');
+            }
+            showNICCapture();
+          } else {
+            // Returning user with existing images - proceed directly
+            showMessage('✅ Returning user detected. Processing check-in...', 'success');
+            
+            const res = await fetch('/record_attendance', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                action: currentAction.toUpperCase(),
+                nic: currentNic,
+                company: currentCompany,
+                front_image_path: '',  // Use existing images from database/disk
+                back_image_path: ''    // Use existing images from database/disk
+              })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.status === 'success') {
+              showSuccess({
+                success: true,
+                message: data.message,
+                nic: currentNic,
+                company: currentCompany,
+                time: data.time,
+                is_first_time: data.is_first_time
+              });
+            } else {
+              showMessage(data.message || 'Submission failed.', 'error');
+            }
+          }
         }
       } catch (err) {
         console.error('Submit error:', err);
@@ -530,6 +591,17 @@
     function showSuccess(data) {
       hideAllContainers();
       successContainer.classList.remove('hidden');
+      
+      // Special styling for first-time users
+      if (data.is_first_time) {
+        successContainer.querySelector('h3').textContent = '🎉 Welcome to Printcare!';
+        successContainer.querySelector('h3').className = 'text-2xl font-bold text-purple-600 mb-4';
+        successContainer.querySelector('.text-6xl').textContent = '🎊';
+      } else {
+        successContainer.querySelector('h3').textContent = 'Success!';
+        successContainer.querySelector('h3').className = 'text-2xl font-bold text-green-600 mb-4';
+        successContainer.querySelector('.text-6xl').textContent = '🎉';
+      }
       
       successMessage.textContent = data.message;
       finalNic.textContent = data.nic;
