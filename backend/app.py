@@ -907,46 +907,60 @@ def record_attendance():
             })
             
         elif action == 'OUT':
-            # First, let's check if there are ANY records for this NIC today
+            # 🏢 MULTI-COMPANY SUPPORT: Look for specific company's IN record without OUT time
             cursor.execute("""
-                SELECT ID, InTime, OutTime, Status FROM AttendanceRecords
-                WHERE NIC = %s AND Date = %s
+                SELECT ID, InTime, OutTime, Status, Company FROM AttendanceRecords
+                WHERE NIC = %s AND Date = %s AND Company = %s AND OutTime IS NULL
                 ORDER BY InTime DESC
-            """, (nic, today))
+                LIMIT 1
+            """, (nic, today, db_company))
             
-            all_records = cursor.fetchall()
-            print(f"🔍 DEBUG: Found {len(all_records)} records for NIC {nic} on {today}")
+            specific_company_record = cursor.fetchone()
+            print(f"🔍 DEBUG: Looking for active {db_company} record for NIC {nic} on {today}")
             
-            if not all_records:
-                return jsonify({
-                    "status": "warning",
-                    "message": f"⚠️ No attendance records found for {nic} today"
-                })
-            
-            # Look for the most recent IN record without OUT time
-            latest_incomplete = None
-            for record in all_records:
-                record_id, in_time, out_time, status = record
-                print(f"🔍 DEBUG: Record ID {record_id}: IN={in_time}, OUT={out_time}, Status={status}")
-                if out_time is None:  # This record hasn't been checked out yet
-                    latest_incomplete = record
-                    break
-            
-            if not latest_incomplete:
-                # Check if there's already a completed record today
-                if all_records:
-                    return jsonify({
-                        "status": "warning", 
-                        "message": f"⚠️ {nic} has already checked out today. Latest record is completed."
-                    })
-                else:
+            if specific_company_record:
+                # Found an active IN record for the selected company
+                record_id, in_time, out_time, status, record_company = specific_company_record
+                print(f"✅ DEBUG: Found active {record_company} record ID {record_id} for OUT")
+                
+            else:
+                # No active record for selected company, check if there are any records for this NIC today
+                cursor.execute("""
+                    SELECT ID, InTime, OutTime, Status, Company FROM AttendanceRecords
+                    WHERE NIC = %s AND Date = %s
+                    ORDER BY InTime DESC
+                """, (nic, today))
+                
+                all_records = cursor.fetchall()
+                
+                if not all_records:
                     return jsonify({
                         "status": "warning",
-                        "message": f"⚠️ No incomplete IN record found for {nic} today"
+                        "message": f"⚠️ No attendance records found for {nic} today. Please check IN first."
+                    })
+                
+                # Check if there are any active IN records for other companies
+                active_companies = []
+                for record in all_records:
+                    r_id, r_in_time, r_out_time, r_status, r_company = record
+                    if r_out_time is None:  # Active IN record
+                        active_companies.append(r_company)
+                
+                if active_companies:
+                    # Show which companies have active IN records
+                    company_list = ', '.join(active_companies)
+                    return jsonify({
+                        "status": "warning",
+                        "message": f"⚠️ No active IN record found for {db_company}. Active companies for {nic}: {company_list}. Please select the correct company."
+                    })
+                else:
+                    # All records are completed
+                    return jsonify({
+                        "status": "warning",
+                        "message": f"⚠️ {nic} has already checked out from all companies today. No active IN records found."
                     })
             
-            record_id, in_time, out_time, status = latest_incomplete
-            print(f"✅ DEBUG: Updating record ID {record_id} with OUT time")
+            print(f"✅ DEBUG: Processing OUT for {db_company}. Updating record ID {record_id}")
             
             # Update with OUT time and status
             cursor.execute(
@@ -1957,6 +1971,93 @@ def check_nic_status():
             "success": False,
             "message": f"Error: {str(e)}"
         }), 500
+
+@app.route('/get_nic_company', methods=['POST'])
+def get_nic_company():
+    """Get all active companies for an NIC to help with OUT validation"""
+    try:
+        data = request.get_json()
+        nic = data.get('nic', '').strip()
+        action = data.get('action', '').upper()
+        
+        if not nic:
+            return jsonify({
+                "success": False,
+                "message": "NIC is required"
+            }), 400
+        
+        # Only provide this information for OUT actions
+        if action != 'OUT':
+            return jsonify({
+                "success": True,
+                "message": "Company validation not required for IN actions"
+            })
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({
+                "success": False,
+                "message": "Database connection failed"
+            }), 500
+            
+        cursor = connection.cursor()
+        today = datetime.today().date()
+        
+        # Look for all active IN records (no OUT time) for this NIC today
+        cursor.execute("""
+            SELECT Company, InTime FROM AttendanceRecords
+            WHERE NIC = %s AND Date = %s AND OutTime IS NULL
+            ORDER BY InTime DESC
+        """, (nic, today))
+        
+        results = cursor.fetchall()
+        
+        if not results:
+            return jsonify({
+                "success": False,
+                "message": f"No active IN records found for {nic} today. Please check IN first.",
+                "has_active_record": False,
+                "active_companies": []
+            })
+        
+        # Convert company codes to display names
+        company_display_names = {
+            'PUL': 'PUL',
+            'PCL': 'PCL', 
+            'PPM': 'PPM',
+            'PDSL': 'PDSL'
+        }
+        
+        active_companies = []
+        for company, in_time in results:
+            active_companies.append({
+                "company": company,
+                "display_company": company_display_names.get(company, company),
+                "in_time": in_time.strftime("%H:%M:%S") if in_time else None
+            })
+        
+        return jsonify({
+            "success": True,
+            "message": f"Found {len(active_companies)} active IN record(s) for {nic}",
+            "has_active_record": True,
+            "active_companies": active_companies,
+            "total_active": len(active_companies)
+        })
+        
+    except Exception as e:
+        print(f"Get NIC company error: {e}")
+        return jsonify({
+            "success": False,
+            "message": f"Error: {str(e)}"
+        }), 500
+    finally:
+        try:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'connection' in locals():
+                connection.close()
+        except:
+            pass
 
 if __name__ == '__main__':
     print("🚀 ATTENDANCE SYSTEM STARTING...")

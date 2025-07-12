@@ -55,9 +55,9 @@
         <label for="company" class="text-2xl font-bold text-gray-700">Select Your Department:</label>
         <select name="company" id="company" class="px-6 py-3 text-xl font-semibold border-2 border-gray-300 rounded-xl bg-white shadow-lg focus:outline-none focus:border-blue-500">
           <option value="">-- Select Department --</option>
-          <option value="PLC">PCL</option>
+          <option value="PCL">PCL</option>
           <option value="PUL">PUL</option>
-            <option value="PLC">PDSL</option>
+          <option value="PDSL">PDSL</option>
           <option value="PPM">PPM</option>
         </select>
       </div>
@@ -324,7 +324,14 @@
       btnOut.classList.add('opacity-50', 'cursor-not-allowed');
     }    // Step 1: Main button handlers
     btnIn.addEventListener('click', () => startScanning('in'));
-    btnOut.addEventListener('click', () => startScanning('out'));
+    btnOut.addEventListener('click', () => {
+      // For OUT actions, first check if NIC is available to validate company
+      if (currentNic) {
+        validateCompanyForOut();
+      } else {
+        startScanning('out');
+      }
+    });
 
     // Step 2: Start camera scanning
     async function startScanning(action) {
@@ -906,6 +913,87 @@
     continueAfterCaptureBtn.addEventListener('click', () => {
       submitAttendanceWithImages();
     });
+
+    // Company validation for OUT actions
+    async function validateCompanyForOut() {
+      if (!currentNic) {
+        startScanning('out');
+        return;
+      }
+      
+      try {
+        showMessage('Checking active companies...', 'info');
+        
+        const response = await fetch('/get_nic_company', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            nic: currentNic,
+            action: 'OUT'
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.has_active_record) {
+          const activeCompanies = data.active_companies;
+          const currentSelected = companySelect.value;
+          
+          // Check if current selection matches any active company
+          const matchingCompany = activeCompanies.find(comp => comp.company === currentSelected);
+          
+          if (matchingCompany) {
+            // Correct company selected, proceed
+            showMessage(`✅ Correct company selected: ${matchingCompany.display_company}. Processing OUT...`, 'success');
+            startScanning('out');
+          } else {
+            // Wrong company or no company selected - show all active companies
+            if (activeCompanies.length === 1) {
+              // Single active company - auto-select it
+              const activeComp = activeCompanies[0];
+              showMessage(`⚠️ Please select company: ${activeComp.display_company} (checked IN at ${activeComp.in_time})`, 'error');
+              
+              // Auto-select the correct company
+              companySelect.value = activeComp.company;
+              currentCompany = activeComp.company;
+              
+              // Enable buttons if they were disabled
+              btnIn.disabled = false;
+              btnOut.disabled = false;
+              btnIn.classList.remove('opacity-50', 'cursor-not-allowed');
+              btnOut.classList.remove('opacity-50', 'cursor-not-allowed');
+              
+              setTimeout(() => {
+                showMessage(`Company auto-selected: ${activeComp.display_company}. Click OUT again to proceed.`, 'success');
+              }, 2000);
+            } else {
+              // Multiple active companies - show selection guidance
+              const companyList = activeCompanies.map(comp => 
+                `${comp.display_company} (IN: ${comp.in_time})`
+              ).join(', ');
+              
+              showMessage(`⚠️ Multiple active companies found. Please select: ${companyList}`, 'error');
+              
+              // Don't auto-select, let user choose
+              setTimeout(() => {
+                showMessage(`You have ${activeCompanies.length} active check-ins. Select the company you want to check OUT from.`, 'info');
+              }, 3000);
+            }
+          }
+        } else {
+          // No active record found
+          showMessage(data.message || 'No active IN records found for OUT action.', 'error');
+          startScanning('out'); // Still allow scanning to get proper error
+        }
+        
+      } catch (error) {
+        console.error('Company validation error:', error);
+        showMessage('Error validating company. Proceeding with OUT...', 'error');
+        startScanning('out');
+      }
+    }
 
   </script>
 </body>
