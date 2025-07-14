@@ -11,9 +11,14 @@ import threading
 import hashlib
 from functools import wraps
 import logging
+import random
+from io import BytesIO
+
+# Import configuration
+from config import DB_CONFIG, ADMIN_CONFIG, COMPANY_MAPPING, COMPANY_DISPLAY_NAMES, TESSERACT_CMD, UPLOAD_FOLDER
 
 # Set Tesseract path
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
 
 # Database initialization function
 def initialize_database():
@@ -21,10 +26,14 @@ def initialize_database():
     try:
         # Connect to MySQL server (without selecting a database)
         connection = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="Tashini258258"
+            host=DB_CONFIG['host'],
+            user=DB_CONFIG['user'],
+            password=DB_CONFIG['password']
         )
+        
+        if not connection:
+            return False
+            
         cursor = connection.cursor()
         
         # Create database if it doesn't exist
@@ -77,8 +86,7 @@ def initialize_database():
         """, ('admin', hashed_password, 'System Administrator', 'admin@printcare.com'))
         
         connection.commit()
-        cursor.close()
-        connection.close()
+        close_db_resources(cursor, connection)
         
         print("✅ Database and tables initialized successfully")
         print("📋 Default admin credentials:")
@@ -100,16 +108,12 @@ initialize_database()
 def populate_sample_data():
     """Populate database with comprehensive sample attendance data until today"""
     try:
-        from datetime import datetime, timedelta
-        import random
-        
         # Connect to database
-        connection = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="Tashini258258",
-            database="AttendanceDB"
-        )
+        connection = get_db_connection()
+        if not connection:
+            print("❌ Failed to connect to database")
+            return
+            
         cursor = connection.cursor()
         
         # Check what's the latest date in the database
@@ -122,8 +126,7 @@ def populate_sample_data():
             latest_date = latest_date_result
             if latest_date >= today:
                 print(f"✅ Database is up to date (latest record: {latest_date})")
-                cursor.close()
-                connection.close()
+                close_db_resources(cursor, connection)
                 return
             else:
                 # Start from the day after the latest record
@@ -338,8 +341,7 @@ def populate_sample_data():
         print(f"👥 Covers {len(workers)} diverse workers")
         print(f"⏰ Includes {len(shift_schedules)} different shift types")
         
-        cursor.close()
-        connection.close()
+        close_db_resources(cursor, connection)
         
     except Exception as e:
         print(f"❌ Error populating sample data: {e}")
@@ -348,12 +350,11 @@ def delete_today_data():
     """Delete all attendance data for today (2025-07-12)"""
     try:
         # Connect to database
-        connection = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="Tashini258258",
-            database="AttendanceDB"
-        )
+        connection = get_db_connection()
+        if not connection:
+            print("❌ Failed to connect to database")
+            return
+            
         cursor = connection.cursor()
         
         today = '2025-07-12'
@@ -363,8 +364,7 @@ def delete_today_data():
         deleted_count = cursor.rowcount
         
         connection.commit()
-        cursor.close()
-        connection.close()
+        close_db_resources(cursor, connection)
         
         print(f"✅ Deleted {deleted_count} attendance records for {today}")
         
@@ -379,7 +379,6 @@ def delete_today_data():
 
 app = Flask(__name__)
 app.secret_key = 'printcare_admin_secret_key_2025'
-UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -418,19 +417,11 @@ def get_shift_from_time(check_time):
         # Night shift: 10:00 PM - 06:00 AM (covers late night and early morning)
         return "Night Shift"
 
-# Database connection with error handling
+# Database connection utilities
 def get_db_connection():
     """Get a fresh database connection with error handling"""
     try:
-        connection = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="Tashini258258",
-            database="AttendanceDB",
-            autocommit=False,
-            charset='utf8mb4',
-            collation='utf8mb4_unicode_ci'
-        )
+        connection = mysql.connector.connect(**DB_CONFIG, autocommit=False)
         return connection
     except mysql.connector.Error as err:
         print(f"❌ Database connection error: {err}")
@@ -439,29 +430,64 @@ def get_db_connection():
         print(f"❌ Unexpected database error: {e}")
         return None
 
-# Initialize database connection
+def get_simple_db_connection():
+    """Get a simple database connection without selecting database"""
+    try:
+        config = DB_CONFIG.copy()
+        config.pop('database', None)  # Remove database selection
+        connection = mysql.connector.connect(**config)
+        return connection
+    except mysql.connector.Error as err:
+        print(f"❌ Simple database connection error: {err}")
+        return None
+
+def close_db_resources(cursor=None, connection=None):
+    """Safely close database resources"""
+    try:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+    except Exception as e:
+        print(f"⚠️ Error closing database resources: {e}")
+
+# Security utilities
+def require_admin_auth(f):
+    """Decorator to require admin authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_logged_in' not in session:
+            log_security_event('UNAUTHORIZED_ACCESS', f'Attempt to access {request.endpoint}')
+            return jsonify({"error": "Unauthorized"}), 401
+        
+        # Check session timeout
+        if 'admin_login_time' in session:
+            login_time = datetime.fromisoformat(session['admin_login_time'])
+            if datetime.now() - login_time > timedelta(minutes=ADMIN_CONFIG['session_timeout']):
+                session.clear()
+                log_security_event('SESSION_TIMEOUT', 'Admin session expired')
+                return jsonify({"error": "Session expired"}), 401
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+def map_company_to_db(company):
+    """Map company display name to database enum value"""
+    return COMPANY_MAPPING.get(company, company if company in ['PUL', 'PCL', 'PPM', 'PDSL'] else 'PUL')
+
+# Initialize database connection (using the centralized function)
 try:
-    db = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="Tashini258258",
-        database="AttendanceDB"
-    )
-    cursor = db.cursor()
-    print("✅ Database connected successfully")
+    db = get_db_connection()
+    if db:
+        cursor = db.cursor()
+        print("✅ Database connected successfully")
+    else:
+        print("❌ Database connection failed")
+        cursor = None
 except Exception as e:
     print(f"❌ Database connection failed: {e}")
     db = None
     cursor = None
-
-# Enhanced security configuration
-ADMIN_CONFIG = {
-    'username': 'admin',
-    'password_hash': hashlib.sha256('printcare2025'.encode()).hexdigest(),
-    'session_timeout': 480,  # 8 hours (480 minutes)
-    'max_failed_attempts': 3,
-    'lockout_duration': 15  # minutes
-}
 
 # Security tracking
 security_log = []
@@ -489,26 +515,6 @@ def check_account_lockout(username):
             del locked_accounts[username]
     return False
 
-def security_required(f):
-    """Decorator for secure admin routes"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'admin_logged_in' not in session:
-            log_security_event('UNAUTHORIZED_ACCESS', f'Attempt to access {request.endpoint}')
-            return redirect(url_for('admin_login'))
-        
-        # Check session timeout
-        if 'admin_login_time' in session:
-            login_time = datetime.fromisoformat(session['admin_login_time'])
-            if datetime.now() - login_time > timedelta(minutes=ADMIN_CONFIG['session_timeout']):
-                session.clear()
-                log_security_event('SESSION_TIMEOUT', 'Admin session expired')
-                flash('Session expired for security. Please login again.', 'warning')
-                return redirect(url_for('admin_login'))
-        
-        return f(*args, **kwargs)
-    return decorated_function
-
 def verify_admin_credentials(username, password):
     """Enhanced admin verification with database lookup and security features"""
     # Check account lockout
@@ -525,16 +531,13 @@ def verify_admin_credentials(username, password):
         
         # Hash the provided password
         password_hash = hashlib.sha256(password.encode()).hexdigest()
-        
-        # Check credentials in database
         cursor.execute("""
             SELECT id, username, full_name FROM admin_users 
             WHERE username = %s AND password = %s
         """, (username, password_hash))
         
         user = cursor.fetchone()
-        cursor.close()
-        connection.close()
+        close_db_resources(cursor, connection)
         
         if user:
             log_security_event('LOGIN_SUCCESS', f'Admin {username} logged in successfully')
@@ -848,26 +851,8 @@ def record_attendance():
         
         print(f"🔍 DEBUG: Processing {action} for NIC {nic} on {today} at {now}")
         
-        # Map company names to database ENUM values
-        company_mapping = {
-            'Printcare Solutions': 'PUL',
-            'Tech Division': 'PCL', 
-            'Design Team': 'PPM',
-            'Operations': 'PDSL',
-            'HR Department': 'PUL',
-            'Finance Team': 'PCL',
-            'Marketing': 'PPM',
-            'IT Support': 'PDSL',
-            'Quality Assurance': 'PUL',
-            # Direct department codes
-            'PUL': 'PUL',
-            'PCL': 'PCL',
-            'PPM': 'PPM',
-            'PDSL': 'PDSL'
-        }
-        
-        # Map the company to database enum value
-        db_company = company_mapping.get(company, company if company in ['PUL', 'PCL', 'PPM', 'PDSL'] else 'PUL')  # Default to PUL
+        # Map the company to database enum value using centralized function
+        db_company = map_company_to_db(company)
         
         if action == 'IN':
             # Check if this is a first-time user
@@ -1002,13 +987,10 @@ def record_attendance():
         }), 500
     finally:
         # Always close the database connection
-        try:
-            if 'cursor' in locals():
-                cursor.close()
-            if 'connection' in locals():
-                connection.close()
-        except:
-            pass
+        close_db_resources(
+            cursor if 'cursor' in locals() else None,
+            connection if 'connection' in locals() else None
+        )
 
 @app.route('/admin')
 def admin_login():
@@ -1051,11 +1033,9 @@ def admin_dashboard():
     return render_template('modern_admin_dashboard.html')
 
 @app.route('/admin/api/stats')
+@require_admin_auth
 def admin_stats():
     """API endpoint for admin statistics with date filtering"""
-    if 'admin_logged_in' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
     try:
         cursor = db.cursor()
         
@@ -1114,11 +1094,9 @@ def admin_stats():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/admin/api/reports')
+@require_admin_auth
 def admin_reports():
     """API endpoint for admin reports"""
-    if 'admin_logged_in' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
     report_type = request.args.get('type', 'daily')
     
     try:
@@ -1193,11 +1171,9 @@ def admin_reports():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/admin/api/recent-attendance')
+@require_admin_auth
 def get_recent_attendance():
     """Get recent attendance records for dashboard"""
-    if 'admin_logged_in' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
     try:
         cursor = db.cursor()
         
@@ -1230,11 +1206,9 @@ def get_recent_attendance():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/admin/api/search-attendance')
+@require_admin_auth
 def search_attendance():
     """Enhanced search attendance records with multiple filters"""
-    if 'admin_logged_in' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
     try:
         cursor = db.cursor()
         
@@ -1362,11 +1336,9 @@ def get_workers():
         return jsonify({'error': f'Database error: {str(e)}'}), 500
 
 @app.route('/admin/api/analytics')
+@require_admin_auth
 def get_analytics():
     """API endpoint for Analytics data with updated AttendanceRecords table"""
-    if 'admin_logged_in' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
     try:
         filter_type = request.args.get('filter', 'daily')
         date_param = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
@@ -1495,18 +1467,16 @@ def get_analytics():
         print(f"❌ Analytics error: {e}")
         return jsonify({'error': 'Database error'}), 500
     finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'connection' in locals():
-            connection.close()
+        close_db_resources(
+            cursor if 'cursor' in locals() else None,
+            connection if 'connection' in locals() else None
+        )
 
 # New comprehensive reporting endpoints
 @app.route('/admin/api/reports/daily')
+@require_admin_auth
 def daily_report():
     """Generate daily attendance report"""
-    if 'admin_logged_in' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
     try:
         date_param = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
         company = request.args.get('company', '')
@@ -1552,12 +1522,14 @@ def daily_report():
                 record['InTime'] = str(record['InTime'])
             if record['OutTime']:
                 record['OutTime'] = str(record['OutTime'])
+            if record['Date']:
+                record['Date'] = str(record['Date'])
         
         return jsonify({
             'success': True,
             'date': date_param,
             'summary': {
-                'total_records': total_records,
+                'total': total_records,
                 'checked_in': checked_in,
                 'checked_out': checked_out,
                 'active': checked_in - checked_out if checked_in > checked_out else 0
@@ -1569,17 +1541,15 @@ def daily_report():
         print(f"❌ Daily report error: {e}")
         return jsonify({'error': f'Database error: {str(e)}'}), 500
     finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'connection' in locals():
-            connection.close()
+        close_db_resources(
+            cursor if 'cursor' in locals() else None,
+            connection if 'connection' in locals() else None
+        )
 
 @app.route('/admin/api/reports/weekly')
+@require_admin_auth
 def weekly_report():
     """Generate weekly attendance report"""
-    if 'admin_logged_in' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
     try:
         date_param = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
         company = request.args.get('company', '')
@@ -1613,33 +1583,32 @@ def weekly_report():
         query += " GROUP BY Date ORDER BY Date"
         
         cursor.execute(query, params)
-        daily_summary = cursor.fetchall()
+        results = cursor.fetchall()
         
-        # Convert dates to strings
-        for record in daily_summary:
-            record['Date'] = str(record['Date'])
+        # Convert date to string for JSON serialization
+        for result in results:
+            if result['Date']:
+                result['Date'] = str(result['Date'])
         
         return jsonify({
             'success': True,
-            'week_ending': date_param,
-            'daily_summary': daily_summary
+            'period': f"Week ending {date_param}",
+            'data': results
         })
         
     except Exception as e:
         print(f"❌ Weekly report error: {e}")
         return jsonify({'error': f'Database error: {str(e)}'}), 500
     finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'connection' in locals():
-            connection.close()
+        close_db_resources(
+            cursor if 'cursor' in locals() else None,
+            connection if 'connection' in locals() else None
+        )
 
 @app.route('/admin/api/reports/monthly')
+@require_admin_auth
 def monthly_report():
     """Generate monthly attendance report"""
-    if 'admin_logged_in' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
     try:
         date_param = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
         company = request.args.get('company', '')
@@ -1701,17 +1670,15 @@ def monthly_report():
         print(f"❌ Monthly report error: {e}")
         return jsonify({'error': f'Database error: {str(e)}'}), 500
     finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'connection' in locals():
-            connection.close()
+        close_db_resources(
+            cursor if 'cursor' in locals() else None,
+            connection if 'connection' in locals() else None
+        )
 
 @app.route('/admin/api/export/excel')
+@require_admin_auth
 def export_excel():
     """Export attendance data to Excel"""
-    if 'admin_logged_in' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
     try:
         report_type = request.args.get('type', 'daily')
         date_param = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
@@ -1970,6 +1937,7 @@ def check_nic_status():
         return jsonify({
             "success": False,
             "message": f"Error: {str(e)}"
+
         }), 500
 
 @app.route('/get_nic_company', methods=['POST'])
@@ -2051,13 +2019,10 @@ def get_nic_company():
             "message": f"Error: {str(e)}"
         }), 500
     finally:
-        try:
-            if 'cursor' in locals():
-                cursor.close()
-            if 'connection' in locals():
-                connection.close()
-        except:
-            pass
+        close_db_resources(
+            cursor if 'cursor' in locals() else None,
+            connection if 'connection' in locals() else None
+        )
 
 if __name__ == '__main__':
     print("🚀 ATTENDANCE SYSTEM STARTING...")
