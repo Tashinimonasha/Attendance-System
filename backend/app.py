@@ -572,109 +572,106 @@ def verify_admin_credentials(username, password):
         return False
 
 def extract_nic_from_text(text):
-    """Extract NIC from OCR text using optimized regex patterns"""
+    """Lightning-fast NIC extraction from OCR text"""
     if not text:
         return None
         
-    # Clean text - remove spaces and normalize
+    # Clean text - remove spaces and normalize (optimized)
     cleaned_text = ''.join(text.replace('\n', ' ').replace('\r', ' ').split()).upper()
     
-    # Only show cleaned text if it's potentially useful
-    if len(cleaned_text) >= 9:
+    # Skip very short texts immediately
+    if len(cleaned_text) < 9:
+        return None
+    
+    # Only show cleaned text if it's potentially useful (reduced logging)
+    if len(cleaned_text) >= 10:
         print(f"Cleaned text: {cleaned_text}")
     
-    # Old NIC format: 9 digits + V/X (most common in Sri Lanka)
-    old_nic_patterns = [
-        r'(\d{9})[VX]',           # Standard format like 792630839V
-        r'(\d{2}\d{7})[VX]',      # With potential spacing
-        r'(\d{3}\d{6})[VX]',      # Alternative spacing
-    ]
+    # Old NIC format: 9 digits + V/X (most common - try this first)
+    old_nic_match = re.search(r'(\d{9})[VX]', cleaned_text)
+    if old_nic_match:
+        result = old_nic_match.group(0)
+        print(f"⚡ OLD NIC FOUND: {result}")
+        return result
     
-    for pattern in old_nic_patterns:
+    # New NIC format: 12 digits (try if old format not found)
+    new_nic_match = re.search(r'\b(\d{12})\b', cleaned_text)
+    if new_nic_match:
+        result = new_nic_match.group(1)
+        print(f"⚡ NEW NIC FOUND: {result}")
+        return result
+    
+    # Alternative old format patterns (only if primary didn't work)
+    for pattern in [r'(\d{2}\d{7})[VX]', r'(\d{3}\d{6})[VX]']:
         match = re.search(pattern, cleaned_text)
         if match:
             result = match.group(0)
-            print(f"✅ Old NIC found: {result}")
+            print(f"⚡ ALT OLD NIC: {result}")
             return result
     
-    # New NIC format: 12 digits
-    new_nic_patterns = [
-        r'\b(\d{12})\b',          # Standard format
-        r'(\d{4}\d{8})',          # With potential spacing
-        r'(\d{6}\d{6})',          # Alternative spacing
-    ]
-    
-    for pattern in new_nic_patterns:
+    # Alternative new format patterns
+    for pattern in [r'(\d{4}\d{8})', r'(\d{6}\d{6})']:
         match = re.search(pattern, cleaned_text)
         if match:
             result = match.group(1)
-            print(f"✅ New NIC found: {result}")
+            print(f"⚡ ALT NEW NIC: {result}")
             return result
-    
-    # Only show "not found" for substantial text
-    if len(cleaned_text) >= 5:
-        print("❌ No NIC pattern found")
     
     return None
 
 def extract_nic(img_path):
-    """Fast and efficient NIC extraction optimized for speed"""
+    """Ultra-fast NIC extraction optimized for maximum speed"""
     try:
         print(f"🔍 Processing image: {img_path}")
+        
+        # Load image once and reuse
         img = Image.open(img_path)
         
         # Convert to RGB if needed
         if img.mode != 'RGB':
             img = img.convert('RGB')
         
-        # Optimized OCR configurations - start with most effective ones
-        fast_configs = [
-            '--psm 6 -c tessedit_char_whitelist=0123456789VXvx',
-            '--psm 8 -c tessedit_char_whitelist=0123456789VXvx',
-            '--psm 7 -c tessedit_char_whitelist=0123456789VXvx',
+        # Ultra-optimized OCR configs - only the most effective one first
+        ultra_fast_configs = [
+            '--psm 6 -c tessedit_char_whitelist=0123456789VXvx',  # Most effective for NICs
+            '--psm 8 -c tessedit_char_whitelist=0123456789VXvx',  # Backup option
         ]
         
-        # Fast processing methods - prioritize speed over exhaustive attempts
-        fast_methods = [
-            # Method 1: High contrast (most effective for NICs)
+        # Super fast processing - only the most effective methods
+        lightning_methods = [
+            # Method 1: High contrast (most successful for NICs) - try this first
             lambda img: ImageEnhance.Contrast(img).enhance(2.0).convert('L'),
-            # Method 2: Sharpness enhancement
-            lambda img: ImageEnhance.Sharpness(img.convert('L')).enhance(1.5),
-            # Method 3: Simple grayscale (fastest)
+            # Method 2: Simple grayscale (fastest fallback)
             lambda img: img.convert('L'),
         ]
         
-        # Try fast combinations first - exit immediately when NIC found
-        for i, process_method in enumerate(fast_methods):
+        # Try lightning-fast extraction - exit immediately when found
+        for i, process_method in enumerate(lightning_methods):
             try:
                 processed_img = process_method(img)
                 
-                for j, config in enumerate(fast_configs):
+                for j, config in enumerate(ultra_fast_configs):
                     try:
-                        # Extract text using current configuration
+                        # Fast OCR extraction
                         text = pytesseract.image_to_string(processed_img, config=config)
                         
-                        # Quick debug - only show non-empty results
-                        if text.strip():
-                            print(f"🔄 Method {i+1}.{j+1}: Found text")
-                        
-                        # Extract NIC from text
+                        # Immediate NIC extraction attempt
                         nic = extract_nic_from_text(text)
                         if nic:
-                            print(f"✅ NIC found quickly: {nic}")
+                            print(f"⚡ LIGHTNING SUCCESS: {nic} (Method {i+1}.{j+1})")
                             return nic
                             
-                    except Exception as ocr_error:
-                        continue
+                    except Exception:
+                        continue  # Skip failed attempts silently for speed
                         
-            except Exception as process_error:
-                continue
+            except Exception:
+                continue  # Skip failed methods silently for speed
         
-        print("❌ Quick extraction failed")
+        print("⚡ Lightning extraction completed - no NIC found")
         return None
         
     except Exception as e:
-        print(f"❌ Critical OCR error: {e}")
+        print(f"❌ Lightning OCR error: {e}")
         return None
 
 @app.route('/')

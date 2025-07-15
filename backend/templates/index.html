@@ -90,7 +90,7 @@
         <div id="scanTimer" class="text-lg font-bold text-green-600 mb-2"></div>
         <div id="scanCounter" class="text-sm font-semibold text-blue-600 mb-2"></div>
         <p class="text-sm text-gray-600 font-semibold">📷 Position ID card within the yellow frame</p>
-        <p class="text-xs text-green-600">⚡ ULTRA FAST scanning - Instant NIC detection!</p>
+        <p class="text-xs text-green-600">⚡ LIGHTNING FAST scanning - Instant NIC detection!</p>
       </div>
       <div class="flex gap-4">
         <button id="manualEntryBtn" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-semibold shadow-lg">
@@ -419,7 +419,7 @@
       if (scanTimer) scanTimer.textContent = '';
       if (scanCounter) scanCounter.textContent = '';
       
-      scanTitle.textContent = `🔍 Ultra Fast Scanning for ${action.toUpperCase()}`;
+      scanTitle.textContent = `🔍 Lightning Fast Scanning for ${action.toUpperCase()}`;
       scanTitle.className = `text-2xl font-bold text-center mb-4 ${action === 'in' ? 'text-green-600' : 'text-red-600'}`;
       
       showMessage('Starting camera...', 'info');
@@ -450,10 +450,10 @@
         scanStartTime = Date.now(); // Reset start time
         startScanTimer();
 
-        showMessage(`⚡ ULTRA FAST SCANNING for ${action.toUpperCase()}... Hold ID card steady in yellow frame`, action === 'in' ? 'success' : 'error');
+        showMessage(`⚡ LIGHTNING FAST SCANNING for ${action.toUpperCase()}... Hold ID card steady in yellow frame`, action === 'in' ? 'success' : 'error');
 
-        // ULTRA FAST scanning - every 200ms for instant detection
-        intervalId = setInterval(captureAndScan, 200);
+        // LIGHTNING FAST scanning - every 150ms for instant detection
+        intervalId = setInterval(captureAndScan, 150);
         
         // Start scanning quickly
         setTimeout(captureAndScan, 100);
@@ -476,12 +476,22 @@
       
       showMessage(`⚡ SCAN ${scanAttempts}... ${currentAction.toUpperCase()} mode - Hold ID steady!`, 'info');
 
+      // Create canvas with optimal size
       const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      const maxSize = 800; // Limit canvas size for speed
+      const aspectRatio = video.videoWidth / video.videoHeight;
+      
+      if (video.videoWidth > maxSize) {
+        canvas.width = maxSize;
+        canvas.height = maxSize / aspectRatio;
+      } else {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      }
+      
       const ctx = canvas.getContext('2d');
       
-      // Enhanced image capture with better quality
+      // Enhanced image capture with optimized quality
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -495,8 +505,8 @@
           const res = await fetch('/scan', {
             method: 'POST',
             body: formData,
-            // FAST timeout for quick response
-            signal: AbortSignal.timeout(3000)  // 3 seconds for faster extraction
+            // LIGHTNING timeout for instant response
+            signal: AbortSignal.timeout(2000)  // 2 seconds for lightning extraction
           });
 
           const data = await res.json();
@@ -524,29 +534,26 @@
             // Quick transition to verification with visual emphasis
             setTimeout(() => {
               showVerification();
-            }, 1500); // Show success for 1.5 seconds then move to next step
+            }, 1200); // Show success for 1.2 seconds then move to next step
             
           } else {
-            console.log(`❌ Scan ${scanAttempts}: ${data.message}`);
-            
-            // Optimized feedback for continuous scanning
-            if (scanAttempts >= 15) {
+            // Optimized feedback for continuous scanning - less console logs
+            if (scanAttempts >= 20) {
               showMessage('🔍 Still scanning... Try adjusting angle or lighting', 'info');
-            } else if (scanAttempts >= 8) {
+            } else if (scanAttempts >= 10) {
               showMessage(`📷 Keep trying... Scan ${scanAttempts}`, 'info');
             } else {
               showMessage(`🔍 Scanning... ${scanAttempts}`, 'info');
             }
           }
         } catch (err) {
-          console.error('Scan error:', err);
           if (err.name === 'TimeoutError') {
-            showMessage(`⏱️ Fast scan timeout - trying again...`, 'info');
+            showMessage(`⏱️ Lightning scan timeout - trying again...`, 'info');
           } else {
             showMessage(`🔄 Quick retry...`, 'info');
           }
         }
-      }, 'image/jpeg', 0.95);  // Higher quality JPEG
+      }, 'image/jpeg', 0.8);  // Reduced quality for speed: 0.8 instead of 0.95
     }
 
     // Camera control buttons
