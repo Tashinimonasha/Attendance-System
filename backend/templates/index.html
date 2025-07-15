@@ -86,8 +86,11 @@
           <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-yellow-400"></div>
           <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-yellow-400"></div>
         </div>
-      </div>      <div class="text-center">        <p class="text-sm text-gray-600 font-semibold">📷 Position ID card within the yellow frame</p>
-        <p class="text-xs text-green-600">⚡ FAST scanning - Quick NIC detection!</p>
+      </div>      <div class="text-center">
+        <div id="scanTimer" class="text-lg font-bold text-green-600 mb-2"></div>
+        <div id="scanCounter" class="text-sm font-semibold text-blue-600 mb-2"></div>
+        <p class="text-sm text-gray-600 font-semibold">📷 Position ID card within the yellow frame</p>
+        <p class="text-xs text-green-600">⚡ ULTRA FAST scanning - Instant NIC detection!</p>
       </div>
       <div class="flex gap-4">
         <button id="manualEntryBtn" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-semibold shadow-lg">
@@ -217,6 +220,8 @@
     const cameraContainer = document.getElementById('cameraContainer');
     const scanTitle = document.getElementById('scanTitle');
     const video = document.getElementById('video');
+    const scanTimer = document.getElementById('scanTimer');
+    const scanCounter = document.getElementById('scanCounter');
     const manualEntryBtn = document.getElementById('manualEntryBtn');
     const cancelScanBtn = document.getElementById('cancelScanBtn');
     
@@ -257,10 +262,13 @@
     const messageDiv = document.getElementById('message');    // State variables
     let stream = null;
     let intervalId = null;
+    let timerIntervalId = null;
+    let scanStartTime = null;
     let currentAction = null;
     let currentNic = null;
     let currentCompany = null;
     let scanning = false;
+    let scanAttempts = 0; // Global scan attempts counter
     
     // NIC capture state variables
     let nicCameraStream = null;
@@ -304,24 +312,78 @@
     }
 
     function stopCamera() {
+      // Complete stop and cleanup
       scanning = false;
-      if (intervalId) clearInterval(intervalId);
-      if (stream) stream.getTracks().forEach(track => track.stop());
-      video.srcObject = null;
+      
+      // Clear all intervals
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+      if (timerIntervalId) {
+        clearInterval(timerIntervalId);
+        timerIntervalId = null;
+      }
+      
+      // Stop all camera tracks
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+      
+      // Clear video source
+      if (video.srcObject) {
+        video.srcObject = null;
+      }
+      
+      // Reset timer displays
+      if (scanTimer) scanTimer.textContent = '';
+      if (scanCounter) scanCounter.textContent = '';
+    }
+
+    function startScanTimer() {
+      // Clear any existing timer interval
+      if (timerIntervalId) {
+        clearInterval(timerIntervalId);
+      }
+      
+      timerIntervalId = setInterval(() => {
+        if (scanStartTime && scanning) {
+          const elapsed = (Date.now() - scanStartTime) / 1000;
+          if (scanTimer) {
+            scanTimer.textContent = `⏱️ ${elapsed.toFixed(1)}s`;
+          }
+          if (scanCounter) {
+            scanCounter.textContent = `📊 Scans: ${scanAttempts}`;
+          }
+        }
+      }, 100); // Update every 100ms for smooth timer
     }
 
     function resetToMainPage() {
       stopCamera();
       hideAllContainers();
       mainButtons.classList.remove('hidden');
+      
+      // Complete state reset
       currentAction = null;
       currentNic = null;
       currentCompany = null;
-      manualNic.value = '';      companySelect.value = '';
+      scanAttempts = 0;
+      scanStartTime = null;
+      
+      // Reset form fields
+      manualNic.value = '';
+      companySelect.value = '';
+      
+      // Reset button states
       btnIn.disabled = true;
       btnOut.disabled = true;
       btnIn.classList.add('opacity-50', 'cursor-not-allowed');
       btnOut.classList.add('opacity-50', 'cursor-not-allowed');
+      
+      // Clear any messages
+      showMessage('', 'info');
     }    // Step 1: Main button handlers
     btnIn.addEventListener('click', () => startScanning('in'));
     btnOut.addEventListener('click', () => {
@@ -335,15 +397,35 @@
 
     // Step 2: Start camera scanning
     async function startScanning(action) {
+      // Complete reset for fresh scanning
       currentAction = action;
-      scanAttempts = 0; // Reset scan attempts
+      scanAttempts = 0;
+      scanning = false; // Reset scanning state
+      
+      // Clear any existing timers and intervals
+      if (intervalId) clearInterval(intervalId);
+      if (timerIntervalId) clearInterval(timerIntervalId);
+      
+      // Stop any existing camera stream
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+      
       hideAllContainers();
       cameraContainer.classList.remove('hidden');
       
-      scanTitle.textContent = `Scanning for ${action.toUpperCase()}`;
+      // Reset timer displays
+      if (scanTimer) scanTimer.textContent = '';
+      if (scanCounter) scanCounter.textContent = '';
+      
+      scanTitle.textContent = `🔍 Ultra Fast Scanning for ${action.toUpperCase()}`;
       scanTitle.className = `text-2xl font-bold text-center mb-4 ${action === 'in' ? 'text-green-600' : 'text-red-600'}`;
       
-      showMessage('Starting camera...', 'info');      try {
+      showMessage('Starting camera...', 'info');
+
+      try {
+        // Request fresh camera stream
         stream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: 'environment',
@@ -352,11 +434,26 @@
             frameRate: { ideal: 30 }
           } 
         });
+        
         video.srcObject = stream;
-        scanning = true;        showMessage(`⚡ FAST SCANNING for ${action.toUpperCase()}... Hold ID card steady in yellow frame`, action === 'in' ? 'success' : 'error');
+        
+        // Wait for video to be ready
+        await new Promise((resolve) => {
+          video.onloadedmetadata = () => {
+            video.play();
+            resolve();
+          };
+        });
+        
+        // Start scanning after video is ready
+        scanning = true;
+        scanStartTime = Date.now(); // Reset start time
+        startScanTimer();
 
-        // FAST scanning - every 300ms for quick detection
-        intervalId = setInterval(captureAndScan, 300);
+        showMessage(`⚡ ULTRA FAST SCANNING for ${action.toUpperCase()}... Hold ID card steady in yellow frame`, action === 'in' ? 'success' : 'error');
+
+        // ULTRA FAST scanning - every 200ms for instant detection
+        intervalId = setInterval(captureAndScan, 200);
         
         // Start scanning quickly
         setTimeout(captureAndScan, 100);
@@ -365,10 +462,18 @@
         showMessage('Camera access denied: ' + error.message, 'error');
         resetToMainPage();
       }
-    }    // Enhanced capture frame and send for scanning
-    let scanAttempts = 0;
+    }
+
+    // Enhanced capture frame and send for scanning
     async function captureAndScan() {
-      if (!video.videoWidth || !scanning) return;      scanAttempts++;
+      if (!video.videoWidth || !scanning) return;
+
+      scanAttempts++;
+      // Update counter immediately
+      if (scanCounter) {
+        scanCounter.textContent = `📊 Scans: ${scanAttempts}`;
+      }
+      
       showMessage(`⚡ SCAN ${scanAttempts}... ${currentAction.toUpperCase()} mode - Hold ID steady!`, 'info');
 
       const canvas = document.createElement('canvas');
@@ -385,35 +490,60 @@
         const formData = new FormData();
         formData.append('id_card', blob, `scan_${Date.now()}.jpg`);
 
-        try {          const res = await fetch('/scan', {
+        try {
+          const startTime = Date.now();
+          const res = await fetch('/scan', {
             method: 'POST',
             body: formData,
             // FAST timeout for quick response
-            signal: AbortSignal.timeout(5000)  // 5 seconds for fast extraction
+            signal: AbortSignal.timeout(3000)  // 3 seconds for faster extraction
           });
 
           const data = await res.json();
+          const extractionTime = (Date.now() - startTime) / 1000;
 
           if (res.ok && data.success) {
+            // IMMEDIATE SUCCESS FEEDBACK
             stopCamera();
             currentNic = data.nic;
-            showMessage(`✅ NIC detected: ${data.nic} (${data.extraction_time}s)`, 'success');
-            showVerification();
+            
+            // Show big success message with NIC and timing
+            const totalTime = ((Date.now() - scanStartTime) / 1000).toFixed(1);
+            showMessage(`🎉 SUCCESS! NIC: ${data.nic} (Found in ${totalTime}s after ${scanAttempts} scans)`, 'success');
+            
+            // Add visual success feedback
+            if (scanTimer) {
+              scanTimer.textContent = `✅ Complete: ${totalTime}s`;
+              scanTimer.className = 'text-lg font-bold text-green-600 mb-2';
+            }
+            if (scanCounter) {
+              scanCounter.textContent = `🎯 Success: ${scanAttempts} scans`;
+              scanCounter.className = 'text-sm font-semibold text-green-600 mb-2';
+            }
+            
+            // Quick transition to verification with visual emphasis
+            setTimeout(() => {
+              showVerification();
+            }, 1500); // Show success for 1.5 seconds then move to next step
+            
           } else {
             console.log(`❌ Scan ${scanAttempts}: ${data.message}`);
             
-            // Simple feedback for fast scanning
-            if (scanAttempts >= 10) {
-              showMessage('🤔 Having trouble? Try manual entry or better lighting.', 'info');
+            // Optimized feedback for continuous scanning
+            if (scanAttempts >= 15) {
+              showMessage('🔍 Still scanning... Try adjusting angle or lighting', 'info');
+            } else if (scanAttempts >= 8) {
+              showMessage(`📷 Keep trying... Scan ${scanAttempts}`, 'info');
             } else {
-              showMessage(`🔍 Scanning... Attempt ${scanAttempts}`, 'info');
+              showMessage(`🔍 Scanning... ${scanAttempts}`, 'info');
             }
-          }        } catch (err) {
+          }
+        } catch (err) {
           console.error('Scan error:', err);
           if (err.name === 'TimeoutError') {
-            showMessage(`⏱️ Processing timeout - trying again...`, 'info');
+            showMessage(`⏱️ Fast scan timeout - trying again...`, 'info');
           } else {
-            showMessage(`🔄 Network issue - retrying scan...`, 'info');
+            showMessage(`🔄 Quick retry...`, 'info');
           }
         }
       }, 'image/jpeg', 0.95);  // Higher quality JPEG
@@ -590,7 +720,19 @@
       manualNic.focus();
       manualNic.select();
     });    rescanBtn.addEventListener('click', () => {
+      // Complete reset for rescanning
       currentNic = null;
+      scanAttempts = 0;
+      
+      // Clear any existing timers
+      if (timerIntervalId) clearInterval(timerIntervalId);
+      if (intervalId) clearInterval(intervalId);
+      
+      // Reset timer displays
+      if (scanTimer) scanTimer.textContent = '';
+      if (scanCounter) scanCounter.textContent = '';
+      
+      // Start fresh scanning
       startScanning(currentAction);
     });
 

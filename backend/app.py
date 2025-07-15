@@ -572,17 +572,20 @@ def verify_admin_credentials(username, password):
         return False
 
 def extract_nic_from_text(text):
-    """Extract NIC from OCR text using regex patterns"""
+    """Extract NIC from OCR text using optimized regex patterns"""
     if not text:
         return None
         
     # Clean text - remove spaces and normalize
     cleaned_text = ''.join(text.replace('\n', ' ').replace('\r', ' ').split()).upper()
-    print(f"Cleaned text: {cleaned_text}")
     
-    # Old NIC format: 9 digits + V/X (most common)
+    # Only show cleaned text if it's potentially useful
+    if len(cleaned_text) >= 9:
+        print(f"Cleaned text: {cleaned_text}")
+    
+    # Old NIC format: 9 digits + V/X (most common in Sri Lanka)
     old_nic_patterns = [
-        r'(\d{9})[VX]',           # Standard format
+        r'(\d{9})[VX]',           # Standard format like 792630839V
         r'(\d{2}\d{7})[VX]',      # With potential spacing
         r'(\d{3}\d{6})[VX]',      # Alternative spacing
     ]
@@ -608,11 +611,14 @@ def extract_nic_from_text(text):
             print(f"✅ New NIC found: {result}")
             return result
     
-    print("❌ No NIC pattern found")
+    # Only show "not found" for substantial text
+    if len(cleaned_text) >= 5:
+        print("❌ No NIC pattern found")
+    
     return None
 
 def extract_nic(img_path):
-    """Enhanced NIC extraction with multiple processing methods for maximum accuracy"""
+    """Fast and efficient NIC extraction optimized for speed"""
     try:
         print(f"🔍 Processing image: {img_path}")
         img = Image.open(img_path)
@@ -621,58 +627,50 @@ def extract_nic(img_path):
         if img.mode != 'RGB':
             img = img.convert('RGB')
         
-        # Try multiple OCR configurations for best results
-        ocr_configs = [
-            # High-quality OCR for crisp text
-            '--psm 6 -c tessedit_char_whitelist=0123456789VXvx --dpi 300',
-            # Alternative PSM for different text layouts
-            '--psm 8 -c tessedit_char_whitelist=0123456789VXvx --dpi 300',
-            # Single text line mode
-            '--psm 7 -c tessedit_char_whitelist=0123456789VXvx --dpi 300',
-            # Raw line mode
-            '--psm 13 -c tessedit_char_whitelist=0123456789VXvx --dpi 300',
+        # Optimized OCR configurations - start with most effective ones
+        fast_configs = [
+            '--psm 6 -c tessedit_char_whitelist=0123456789VXvx',
+            '--psm 8 -c tessedit_char_whitelist=0123456789VXvx',
+            '--psm 7 -c tessedit_char_whitelist=0123456789VXvx',
         ]
         
-        # Try different image processing methods
-        processing_methods = [
-            # Method 1: High contrast + sharpness
-            lambda img: ImageEnhance.Sharpness(ImageEnhance.Contrast(img).enhance(2.5)).enhance(2.0).convert('L'),
-            # Method 2: Moderate enhancement
-            lambda img: ImageEnhance.Contrast(ImageEnhance.Sharpness(img).enhance(1.5)).enhance(1.8).convert('L'),
-            # Method 3: Simple grayscale
+        # Fast processing methods - prioritize speed over exhaustive attempts
+        fast_methods = [
+            # Method 1: High contrast (most effective for NICs)
+            lambda img: ImageEnhance.Contrast(img).enhance(2.0).convert('L'),
+            # Method 2: Sharpness enhancement
+            lambda img: ImageEnhance.Sharpness(img.convert('L')).enhance(1.5),
+            # Method 3: Simple grayscale (fastest)
             lambda img: img.convert('L'),
-            # Method 4: Heavy contrast
-            lambda img: ImageEnhance.Contrast(img.convert('L')).enhance(3.0),
         ]
         
-        # Try each combination of processing method and OCR config
-        for i, process_method in enumerate(processing_methods):
+        # Try fast combinations first - exit immediately when NIC found
+        for i, process_method in enumerate(fast_methods):
             try:
                 processed_img = process_method(img)
                 
-                for j, config in enumerate(ocr_configs):
+                for j, config in enumerate(fast_configs):
                     try:
-                        print(f"🔄 Attempt {i+1}.{j+1}: Processing method {i+1}, OCR config {j+1}")
-                        
                         # Extract text using current configuration
                         text = pytesseract.image_to_string(processed_img, config=config)
-                        print(f"OCR Text: '{text.strip()}'")
+                        
+                        # Quick debug - only show non-empty results
+                        if text.strip():
+                            print(f"🔄 Method {i+1}.{j+1}: Found text")
                         
                         # Extract NIC from text
                         nic = extract_nic_from_text(text)
                         if nic:
-                            print(f"✅ NIC successfully extracted: {nic}")
+                            print(f"✅ NIC found quickly: {nic}")
                             return nic
                             
                     except Exception as ocr_error:
-                        print(f"⚠️ OCR config {j+1} failed: {ocr_error}")
                         continue
                         
             except Exception as process_error:
-                print(f"⚠️ Processing method {i+1} failed: {process_error}")
                 continue
         
-        print("❌ All extraction methods failed")
+        print("❌ Quick extraction failed")
         return None
         
     except Exception as e:
@@ -686,7 +684,7 @@ def index():
 
 @app.route('/scan', methods=['POST'])
 def scan():
-    """Scan ID card and extract NIC"""
+    """Optimized NIC scanning with ultra-fast processing"""
     if 'id_card' not in request.files:
         return jsonify({"success": False, "message": "No file uploaded"}), 400
     
@@ -700,7 +698,7 @@ def scan():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        # Extract NIC from image
+        # Ultra-fast NIC extraction
         start_time = datetime.now()
         nic = extract_nic(filepath)
         end_time = datetime.now()
@@ -708,6 +706,12 @@ def scan():
         extraction_time = (end_time - start_time).total_seconds()
         
         if nic:
+            # Clean up file immediately after successful extraction
+            try:
+                os.remove(filepath)
+            except:
+                pass
+                
             return jsonify({
                 "success": True,
                 "nic": nic,
@@ -715,6 +719,12 @@ def scan():
                 "message": "NIC extracted successfully"
             })
         else:
+            # Clean up file even if extraction failed
+            try:
+                os.remove(filepath)
+            except:
+                pass
+                
             return jsonify({
                 "success": False,
                 "message": "Could not extract NIC from image"
