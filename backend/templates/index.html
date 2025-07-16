@@ -314,6 +314,7 @@
     function stopCamera() {
       // Complete stop and cleanup
       scanning = false;
+      window.scanInProgress = false; // Clear scan flag immediately
       
       // Clear all intervals
       if (intervalId) {
@@ -350,11 +351,36 @@
       timerIntervalId = setInterval(() => {
         if (scanStartTime && scanning) {
           const elapsed = (Date.now() - scanStartTime) / 1000;
+          
+          // Cap timer at 10 seconds maximum
+          const displayTime = Math.min(elapsed, 10.0);
+          
           if (scanTimer) {
-            scanTimer.textContent = `⏱️ ${elapsed.toFixed(1)}s`;
+            // Change color when approaching 10 seconds
+            if (displayTime >= 8.0) {
+              scanTimer.className = 'text-lg font-bold text-red-600 mb-2';
+              scanTimer.textContent = `⚠️ ${displayTime.toFixed(1)}s`;
+            } else if (displayTime >= 6.0) {
+              scanTimer.className = 'text-lg font-bold text-orange-600 mb-2';
+              scanTimer.textContent = `⏱️ ${displayTime.toFixed(1)}s`;
+            } else {
+              scanTimer.className = 'text-lg font-bold text-green-600 mb-2';
+              scanTimer.textContent = `⏱️ ${displayTime.toFixed(1)}s`;
+            }
           }
+          
           if (scanCounter) {
             scanCounter.textContent = `📊 Scans: ${scanAttempts}`;
+          }
+          
+          // Stop timer at exactly 10 seconds
+          if (elapsed >= 10.0) {
+            if (scanTimer) {
+              scanTimer.textContent = `🛑 10.0s (MAX)`;
+              scanTimer.className = 'text-lg font-bold text-red-700 mb-2';
+            }
+            clearInterval(timerIntervalId);
+            timerIntervalId = null;
           }
         }
       }, 100); // Update every 100ms for smooth timer
@@ -450,13 +476,22 @@
         scanStartTime = Date.now(); // Reset start time
         startScanTimer();
 
-        showMessage(`⚡ LIGHTNING FAST SCANNING for ${action.toUpperCase()}... Hold ID card steady in yellow frame`, action === 'in' ? 'success' : 'error');
+        showMessage(`🔍 ENHANCED SCANNING for ${action.toUpperCase()}... Hold ID card steady in yellow frame`, action === 'in' ? 'success' : 'error');
 
-        // LIGHTNING FAST scanning - every 150ms for instant detection
-        intervalId = setInterval(captureAndScan, 150);
+        // ENHANCED scanning - every 200ms for better reliability
+        intervalId = setInterval(captureAndScan, 200);
         
         // Start scanning quickly
-        setTimeout(captureAndScan, 100);
+        setTimeout(captureAndScan, 150);
+
+        // Global 10-second timeout for entire scanning process
+        setTimeout(() => {
+          if (scanning) {
+            stopCamera();
+            showMessage('⏰ Scanning timeout after 10 seconds. Please try again with better lighting or angle.', 'warning');
+            resetToMainPage();
+          }
+        }, 10000); // 10 seconds maximum scanning time
 
       } catch (error) {
         showMessage('Camera access denied: ' + error.message, 'error');
@@ -466,7 +501,12 @@
 
     // Enhanced capture frame and send for scanning
     async function captureAndScan() {
+      // Double-check scanning state and prevent multiple simultaneous requests
       if (!video.videoWidth || !scanning) return;
+      
+      // Prevent multiple simultaneous scan requests
+      if (window.scanInProgress) return;
+      window.scanInProgress = true;
 
       scanAttempts++;
       // Update counter immediately
@@ -505,21 +545,24 @@
           const res = await fetch('/scan', {
             method: 'POST',
             body: formData,
-            // LIGHTNING timeout for instant response
-            signal: AbortSignal.timeout(2000)  // 2 seconds for lightning extraction
+            // Enhanced timeout for better accuracy
+            signal: AbortSignal.timeout(3000)  // 3 seconds for thorough extraction
           });
 
           const data = await res.json();
           const extractionTime = (Date.now() - startTime) / 1000;
 
           if (res.ok && data.success) {
-            // IMMEDIATE SUCCESS FEEDBACK
+            // IMMEDIATE SUCCESS FEEDBACK - Stop scanning first!
+            scanning = false; // Stop scanning immediately
+            clearInterval(intervalId); // Clear scan interval
+            
             stopCamera();
             currentNic = data.nic;
             
             // Show big success message with NIC and timing
             const totalTime = ((Date.now() - scanStartTime) / 1000).toFixed(1);
-            showMessage(`🎉 SUCCESS! NIC: ${data.nic} (Found in ${totalTime}s after ${scanAttempts} scans)`, 'success');
+            showMessage(`🎉 SUCCESS! NIC: ${data.nic} (Found in ${totalTime}s)`, 'success');
             
             // Add visual success feedback
             if (scanTimer) {
@@ -531,29 +574,43 @@
               scanCounter.className = 'text-sm font-semibold text-green-600 mb-2';
             }
             
-            // Quick transition to verification with visual emphasis
+            // INSTANT transition to verification - no delay!
             setTimeout(() => {
               showVerification();
-            }, 1200); // Show success for 1.2 seconds then move to next step
+            }, 500); // Reduced from 1200ms to 500ms for faster response
+            
+            return; // Exit immediately - no more scanning needed!
             
           } else {
-            // Optimized feedback for continuous scanning - less console logs
-            if (scanAttempts >= 20) {
-              showMessage('🔍 Still scanning... Try adjusting angle or lighting', 'info');
+            // Enhanced feedback for continuous scanning with better guidance
+            if (scanAttempts >= 30) {
+              showMessage('🔍 Long scanning... Try different lighting or hold card closer', 'warning');
+            } else if (scanAttempts >= 20) {
+              showMessage('📱 Try holding card flat and steady in the yellow frame', 'info');
+            } else if (scanAttempts >= 15) {
+              showMessage('💡 Ensure good lighting - avoid shadows on the card', 'info');
             } else if (scanAttempts >= 10) {
-              showMessage(`📷 Keep trying... Scan ${scanAttempts}`, 'info');
+              showMessage(`📷 Scanning... ${scanAttempts} attempts - keep card steady`, 'info');
+            } else if (scanAttempts >= 5) {
+              showMessage(`🔍 Looking for NIC... ${scanAttempts} scans`, 'info');
             } else {
               showMessage(`🔍 Scanning... ${scanAttempts}`, 'info');
             }
           }
         } catch (err) {
           if (err.name === 'TimeoutError') {
-            showMessage(`⏱️ Lightning scan timeout - trying again...`, 'info');
+            showMessage(`⏱️ Processing timeout - adjusting and retrying...`, 'warning');
+          } else if (err.name === 'NetworkError') {
+            showMessage(`📶 Network issue - retrying...`, 'warning');
           } else {
-            showMessage(`🔄 Quick retry...`, 'info');
+            showMessage(`🔄 Scan error - continuing...`, 'info');
           }
+          // Continue scanning even on errors
+        } finally {
+          // Clear the scan flag to allow next scan
+          window.scanInProgress = false;
         }
-      }, 'image/jpeg', 0.8);  // Reduced quality for speed: 0.8 instead of 0.95
+      }, 'image/jpeg', 0.9);  // Higher quality for better OCR: 0.9 instead of 0.8
     }
 
     // Camera control buttons
