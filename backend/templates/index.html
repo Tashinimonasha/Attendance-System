@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>  <meta charset="UTF-8" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Attendance OCR - Printcare</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -16,10 +18,59 @@
       background: rgba(0, 0, 50, 0.6);
       z-index: -1;
     }
+    
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      body {
+        background-attachment: scroll;
+        font-size: 16px; /* Prevent zoom on iOS */
+      }
+      
+      /* Prevent horizontal scroll */
+      html, body {
+        overflow-x: hidden;
+        width: 100%;
+      }
+      
+      /* Touch targets */
+      button, input, select {
+        min-height: 44px;
+        font-size: 16px; /* Prevent zoom on iOS */
+      }
+      
+      /* Video responsive */
+      video {
+        max-width: 100%;
+        height: auto;
+      }
+      
+      /* Modal-like containers on mobile */
+      .mobile-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 50;
+        overflow-y: auto;
+        background: rgba(0, 0, 50, 0.8);
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+    }
+    
+    /* Landscape phone adjustments */
+    @media (max-width: 768px) and (orientation: landscape) {
+      .mobile-modal {
+        padding: 0.5rem;
+      }
+    }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-white font-sans">
-  <h1 class="text-6xl font-extrabold mb-12 text-center drop-shadow-lg">
+<body class="min-h-screen flex flex-col items-center justify-center px-3 sm:px-6 py-4 sm:py-10 text-white font-sans">
+  <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 sm:mb-8 md:mb-12 text-center drop-shadow-lg px-2">
     Welcome to <span class="text-yellow-400">Printcare</span>
   </h1>
   
@@ -28,10 +79,10 @@
     {% if messages %}
       {% for category, message in messages %}
         {% if category == 'success' %}
-          <div id="logoutMessage" class="mb-6 bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-xl shadow-lg flex items-center justify-center max-w-md">
+          <div id="logoutMessage" class="mb-4 sm:mb-6 bg-green-100 border border-green-400 text-green-700 px-4 sm:px-6 py-3 sm:py-4 rounded-xl shadow-lg flex items-center justify-center max-w-xs sm:max-w-md mx-2">
             <i class="fas fa-check-circle mr-2"></i>
-            {{ message }}
-            <button onclick="closeLogoutMessage()" class="ml-4 text-green-500 hover:text-green-700">
+            <span class="text-sm sm:text-base">{{ message }}</span>
+            <button onclick="closeLogoutMessage()" class="ml-2 sm:ml-4 text-green-500 hover:text-green-700">
               <i class="fas fa-times"></i>
             </button>
           </div>
@@ -41,19 +92,19 @@
   {% endwith %}
   
   <!-- Admin Dashboard Link -->
-  <div class="mb-6">
-    <a href="/admin" class="bg-gray-800 bg-opacity-70 hover:bg-opacity-90 text-white px-6 py-3 rounded-xl font-semibold transition duration-200 shadow-lg">
+  <div class="mb-4 sm:mb-6">
+    <a href="/admin" class="bg-gray-800 bg-opacity-70 hover:bg-opacity-90 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold transition duration-200 shadow-lg text-sm sm:text-base">
       🔧 Admin Dashboard
     </a>
   </div>
   
-  <div class="bg-white bg-opacity-95 text-gray-900 rounded-3xl shadow-2xl p-10 max-w-4xl w-full">
+  <div class="bg-white bg-opacity-95 text-gray-900 rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 lg:p-10 max-w-xs sm:max-w-lg md:max-w-2xl lg:max-w-4xl w-full mx-2">
       <!-- Step 1: Main IN/OUT buttons -->
-    <div id="mainButtons" class="flex flex-col items-center gap-8 mb-8">
+    <div id="mainButtons" class="flex flex-col items-center gap-4 sm:gap-6 md:gap-8 mb-6 sm:mb-8">
       <!-- Company Selection -->
-      <div class="flex flex-col items-center space-y-4">
-        <label for="company" class="text-2xl font-bold text-gray-700">Select Your Department:</label>
-        <select name="company" id="company" class="px-6 py-3 text-xl font-semibold border-2 border-gray-300 rounded-xl bg-white shadow-lg focus:outline-none focus:border-blue-500">
+      <div class="flex flex-col items-center space-y-3 sm:space-y-4 w-full">
+        <label for="company" class="text-lg sm:text-xl md:text-2xl font-bold text-gray-700 text-center">Select Your Department:</label>
+        <select name="company" id="company" class="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg md:text-xl font-semibold border-2 border-gray-300 rounded-xl bg-white shadow-lg focus:outline-none focus:border-blue-500 w-full max-w-xs sm:max-w-sm">
           <option value="">-- Select Department --</option>
           <option value="PCL">PCL</option>
           <option value="PUL">PUL</option>
@@ -64,152 +115,152 @@
   
       
       <!-- IN/OUT Buttons -->
-      <div class="flex justify-center gap-12">
-        <button id="btnIn" class="px-20 py-8 bg-green-600 hover:bg-green-700 rounded-2xl text-white font-bold text-4xl shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+      <div class="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 md:gap-8 lg:gap-12 w-full">
+        <button id="btnIn" class="px-8 sm:px-12 md:px-16 lg:px-20 py-4 sm:py-6 md:py-8 bg-green-600 hover:bg-green-700 rounded-2xl text-white font-bold text-xl sm:text-2xl md:text-3xl lg:text-4xl shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto" disabled>
           ✅ IN
         </button>
-        <button id="btnOut" class="px-20 py-8 bg-red-600 hover:bg-red-700 rounded-2xl text-white font-bold text-4xl shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+        <button id="btnOut" class="px-8 sm:px-12 md:px-16 lg:px-20 py-4 sm:py-6 md:py-8 bg-red-600 hover:bg-red-700 rounded-2xl text-white font-bold text-xl sm:text-2xl md:text-3xl lg:text-4xl shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto" disabled>
           ❌ OUT
         </button>
       </div>
     </div>    <!-- Step 2: Enhanced Camera scanning -->
-    <div id="cameraContainer" class="flex flex-col items-center space-y-4 hidden">
-      <h3 id="scanTitle" class="text-2xl font-bold text-center mb-4">🔍 Fast Scanning for IN</h3>
-      <div class="relative">
-        <video id="video" autoplay playsinline class="rounded-lg shadow w-full max-w-md border-4 border-blue-400"></video>
+    <div id="cameraContainer" class="flex flex-col items-center space-y-3 sm:space-y-4 hidden">
+      <h3 id="scanTitle" class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-2 sm:mb-4 px-2">🔍 Fast Scanning for IN</h3>
+      <div class="relative w-full max-w-sm sm:max-w-md md:max-w-lg">
+        <video id="video" autoplay playsinline class="rounded-lg shadow w-full border-4 border-blue-400"></video>
         <!-- Scanning overlay -->
         <div class="absolute inset-0 border-4 border-green-400 rounded-lg animate-pulse opacity-75 pointer-events-none"></div>
         <!-- Scanning guide lines -->
-        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-40 border-2 border-yellow-400 rounded-lg pointer-events-none">
-          <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-yellow-400"></div>
-          <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-yellow-400"></div>
-          <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-yellow-400"></div>
-          <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-yellow-400"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 sm:w-56 md:w-64 h-32 sm:h-36 md:h-40 border-2 border-yellow-400 rounded-lg pointer-events-none">
+          <div class="absolute top-0 left-0 w-6 sm:w-8 h-6 sm:h-8 border-t-4 border-l-4 border-yellow-400"></div>
+          <div class="absolute top-0 right-0 w-6 sm:w-8 h-6 sm:h-8 border-t-4 border-r-4 border-yellow-400"></div>
+          <div class="absolute bottom-0 left-0 w-6 sm:w-8 h-6 sm:h-8 border-b-4 border-l-4 border-yellow-400"></div>
+          <div class="absolute bottom-0 right-0 w-6 sm:w-8 h-6 sm:h-8 border-b-4 border-r-4 border-yellow-400"></div>
         </div>
-      </div>      <div class="text-center">
-        <div id="scanTimer" class="text-lg font-bold text-green-600 mb-2"></div>
-        <div id="scanCounter" class="text-sm font-semibold text-blue-600 mb-2"></div>
-        <p class="text-sm text-gray-600 font-semibold">📷 Position ID card within the yellow frame</p>
+      </div>      <div class="text-center px-2">
+        <div id="scanTimer" class="text-base sm:text-lg font-bold text-green-600 mb-1 sm:mb-2"></div>
+        <div id="scanCounter" class="text-xs sm:text-sm font-semibold text-blue-600 mb-1 sm:mb-2"></div>
+        <p class="text-xs sm:text-sm text-gray-600 font-semibold">📷 Position ID card within the yellow frame</p>
         <p class="text-xs text-green-600">⚡ LIGHTNING FAST scanning - Instant NIC detection!</p>
       </div>
-      <div class="flex gap-4">
-        <button id="manualEntryBtn" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-semibold shadow-lg">
+      <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full max-w-xs sm:max-w-none">
+        <button id="manualEntryBtn" class="px-4 sm:px-6 py-2 sm:py-3 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-semibold shadow-lg text-sm sm:text-base w-full sm:w-auto">
           ⌨️ Manual Entry
         </button>
-        <button id="cancelScanBtn" class="px-6 py-3 bg-gray-500 hover:bg-gray-600 rounded-lg text-white font-semibold shadow-lg">
+        <button id="cancelScanBtn" class="px-4 sm:px-6 py-2 sm:py-3 bg-gray-500 hover:bg-gray-600 rounded-lg text-white font-semibold shadow-lg text-sm sm:text-base w-full sm:w-auto">
           ❌ Cancel
         </button>
       </div>
     </div>
 
     <!-- Step 3: Manual NIC entry -->
-    <div id="manualEntryContainer" class="hidden flex flex-col items-center space-y-4">
-      <h3 id="manualTitle" class="text-2xl font-bold text-center mb-4">Enter NIC for IN</h3>
+    <div id="manualEntryContainer" class="hidden flex flex-col items-center space-y-3 sm:space-y-4">
+      <h3 id="manualTitle" class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-2 sm:mb-4 px-2">Enter NIC for IN</h3>
       <input type="text" id="manualNic" placeholder="Enter NIC (e.g., 123456789V)" 
-             class="px-4 py-3 border-2 rounded-lg text-center text-lg font-mono tracking-wider w-80" maxlength="12">
-      <div class="flex gap-4">
-        <button id="confirmManualBtn" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold">
+             class="px-3 sm:px-4 py-2 sm:py-3 border-2 rounded-lg text-center text-base sm:text-lg font-mono tracking-wider w-full max-w-xs sm:max-w-sm" maxlength="12">
+      <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full max-w-xs sm:max-w-none">
+        <button id="confirmManualBtn" class="px-6 sm:px-8 py-2 sm:py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold text-sm sm:text-base w-full sm:w-auto">
           Confirm NIC
         </button>
-        <button id="cancelManualBtn" class="px-8 py-3 bg-gray-500 hover:bg-gray-600 rounded-lg text-white font-semibold">
+        <button id="cancelManualBtn" class="px-6 sm:px-8 py-2 sm:py-3 bg-gray-500 hover:bg-gray-600 rounded-lg text-white font-semibold text-sm sm:text-base w-full sm:w-auto">
           Cancel
         </button>
       </div>
     </div>
 
     <!-- Step 4: NIC verification and submission -->
-    <div id="verificationContainer" class="hidden flex flex-col items-center space-y-6">
-      <h3 id="verifyTitle" class="text-2xl font-bold text-center">Verify NIC for IN</h3>
+    <div id="verificationContainer" class="hidden flex flex-col items-center space-y-4 sm:space-y-6">
+      <h3 id="verifyTitle" class="text-lg sm:text-xl md:text-2xl font-bold text-center px-2">Verify NIC for IN</h3>
       
-      <div class="bg-gray-100 p-6 rounded-lg border-2 border-blue-300">
-        <p class="text-lg font-semibold text-gray-700 mb-2">Scanned NIC:</p>
-        <p id="scannedNic" class="text-3xl font-mono font-bold text-blue-600 tracking-wider text-center"></p>
+      <div class="bg-gray-100 p-4 sm:p-6 rounded-lg border-2 border-blue-300 w-full max-w-sm sm:max-w-md">
+        <p class="text-base sm:text-lg font-semibold text-gray-700 mb-2 text-center">Scanned NIC:</p>
+        <p id="scannedNic" class="text-xl sm:text-2xl md:text-3xl font-mono font-bold text-blue-600 tracking-wider text-center break-all"></p>
       </div>
       
-      <p class="text-lg text-center text-gray-700">Is this NIC correct?</p>
+      <p class="text-base sm:text-lg text-center text-gray-700 px-2">Is this NIC correct?</p>
       
-      <div class="flex gap-6">
-        <button id="submitBtn" class="px-12 py-4 bg-green-600 hover:bg-green-700 rounded-xl text-white font-bold text-xl shadow-lg">
+      <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 w-full max-w-xs sm:max-w-none">
+        <button id="submitBtn" class="px-6 sm:px-8 md:px-12 py-3 sm:py-4 bg-green-600 hover:bg-green-700 rounded-xl text-white font-bold text-base sm:text-lg md:text-xl shadow-lg w-full sm:w-auto">
           ✅ Yes, Submit
         </button>
-        <button id="editNicBtn" class="px-12 py-4 bg-orange-500 hover:bg-orange-600 rounded-xl text-white font-bold text-xl shadow-lg">
+        <button id="editNicBtn" class="px-6 sm:px-8 md:px-12 py-3 sm:py-4 bg-orange-500 hover:bg-orange-600 rounded-xl text-white font-bold text-base sm:text-lg md:text-xl shadow-lg w-full sm:w-auto">
           ✏️ Edit NIC
         </button>
-        <button id="rescanBtn" class="px-12 py-4 bg-blue-500 hover:bg-blue-600 rounded-xl text-white font-bold text-xl shadow-lg">
+        <button id="rescanBtn" class="px-6 sm:px-8 md:px-12 py-3 sm:py-4 bg-blue-500 hover:bg-blue-600 rounded-xl text-white font-bold text-base sm:text-lg md:text-xl shadow-lg w-full sm:w-auto">
           📷 Rescan
         </button>
       </div>
     </div>
 
     <!-- Step 5: NIC Image Capture (for IN actions only) -->
-    <div id="nicCaptureContainer" class="hidden flex flex-col items-center space-y-6">
-      <h3 class="text-2xl font-bold text-center text-blue-600">📸 Capture NIC Images</h3>
+    <div id="nicCaptureContainer" class="hidden flex flex-col items-center space-y-4 sm:space-y-6">
+      <h3 class="text-lg sm:text-xl md:text-2xl font-bold text-center text-blue-600 px-2">📸 Capture NIC Images</h3>
       
       <!-- Camera preview for NIC capture -->
-      <div class="relative">
-        <video id="nicCameraPreview" class="w-80 h-60 border-2 border-blue-300 rounded-lg bg-black hidden" autoplay muted playsinline></video>
+      <div class="relative w-full max-w-xs sm:max-w-sm md:max-w-md">
+        <video id="nicCameraPreview" class="w-full h-48 sm:h-56 md:h-60 border-2 border-blue-300 rounded-lg bg-black hidden" autoplay muted playsinline></video>
         <canvas id="nicCaptureCanvas" class="hidden"></canvas>
       </div>
       
       <!-- Image capture status -->
-      <div id="nicCaptureStatus" class="text-center">
-        <p id="nicCaptureInstruction" class="text-lg font-semibold text-gray-700 mb-4">
+      <div id="nicCaptureStatus" class="text-center px-2">
+        <p id="nicCaptureInstruction" class="text-base sm:text-lg font-semibold text-gray-700 mb-3 sm:mb-4">
           Step 1: Capture Front Side of NIC
         </p>
-        <p class="text-sm text-gray-600 mb-4">Position your NIC card clearly in the camera view</p>
+        <p class="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">Position your NIC card clearly in the camera view</p>
       </div>
       
       <!-- Captured images preview -->
-      <div id="nicImagesPreview" class="flex gap-4 hidden">
+      <div id="nicImagesPreview" class="flex flex-col sm:flex-row gap-3 sm:gap-4 hidden">
         <div class="text-center">
-          <p class="text-sm font-semibold text-gray-600 mb-2">Front Side</p>
-          <img id="frontImagePreview" class="w-32 h-24 border rounded-lg object-cover" />
+          <p class="text-xs sm:text-sm font-semibold text-gray-600 mb-2">Front Side</p>
+          <img id="frontImagePreview" class="w-24 sm:w-28 md:w-32 h-18 sm:h-21 md:h-24 border rounded-lg object-cover mx-auto" />
         </div>
         <div class="text-center">
-          <p class="text-sm font-semibold text-gray-600 mb-2">Back Side</p>
-          <img id="backImagePreview" class="w-32 h-24 border rounded-lg object-cover" />
+          <p class="text-xs sm:text-sm font-semibold text-gray-600 mb-2">Back Side</p>
+          <img id="backImagePreview" class="w-24 sm:w-28 md:w-32 h-18 sm:h-21 md:h-24 border rounded-lg object-cover mx-auto" />
         </div>
       </div>
       
       <!-- Action buttons -->
-      <div class="flex gap-4">
-        <button id="captureNicBtn" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold">
+      <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full max-w-xs sm:max-w-none">
+        <button id="captureNicBtn" class="px-6 sm:px-8 py-2 sm:py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold text-sm sm:text-base w-full sm:w-auto">
           📷 Capture Image
         </button>
-        <button id="retakeNicBtn" class="px-8 py-3 bg-orange-500 hover:bg-orange-600 rounded-lg text-white font-semibold hidden">
+        <button id="retakeNicBtn" class="px-6 sm:px-8 py-2 sm:py-3 bg-orange-500 hover:bg-orange-600 rounded-lg text-white font-semibold hidden text-sm sm:text-base w-full sm:w-auto">
           🔄 Retake
         </button>
-        <button id="proceedWithoutImagesBtn" class="px-8 py-3 bg-gray-500 hover:bg-gray-600 rounded-lg text-white font-semibold">
+        <button id="proceedWithoutImagesBtn" class="px-6 sm:px-8 py-2 sm:py-3 bg-gray-500 hover:bg-gray-600 rounded-lg text-white font-semibold text-sm sm:text-base w-full sm:w-auto">
           ⏭️ Skip Images
         </button>
       </div>
       
       <!-- Continue button (shown after both images captured) -->
-      <button id="continueAfterCaptureBtn" class="px-12 py-4 bg-green-600 hover:bg-green-700 rounded-xl text-white font-bold text-xl shadow-lg hidden">
+      <button id="continueAfterCaptureBtn" class="px-8 sm:px-10 md:px-12 py-3 sm:py-4 bg-green-600 hover:bg-green-700 rounded-xl text-white font-bold text-base sm:text-lg md:text-xl shadow-lg hidden w-full max-w-xs sm:max-w-sm">
         ✅ Continue with Images
       </button>
     </div>
 
     <!-- Step 6: Success message -->
-    <div id="successContainer" class="hidden flex flex-col items-center space-y-4">
-      <div class="text-center">
-        <div class="text-6xl mb-4">🎉</div>
-        <h3 class="text-2xl font-bold text-green-600 mb-4">Success!</h3>
-        <p id="successMessage" class="text-xl text-gray-700 mb-6"></p>
-        <div class="bg-gray-100 p-4 rounded-lg">
-          <p class="text-sm text-gray-600">NIC: <span id="finalNic" class="font-mono font-bold"></span></p>
-          <p class="text-sm text-gray-600">Company: <span id="finalCompany" class="font-bold"></span></p>
-          <p class="text-sm text-gray-600">Time: <span id="finalTime" class="font-bold"></span></p>
-          <p id="workHoursDisplay" class="text-sm text-gray-600 hidden">Work Hours: <span id="finalWorkHours" class="font-bold"></span></p>
+    <div id="successContainer" class="hidden flex flex-col items-center space-y-3 sm:space-y-4">
+      <div class="text-center px-2">
+        <div class="text-4xl sm:text-5xl md:text-6xl mb-3 sm:mb-4">🎉</div>
+        <h3 class="text-lg sm:text-xl md:text-2xl font-bold text-green-600 mb-3 sm:mb-4">Success!</h3>
+        <p id="successMessage" class="text-base sm:text-lg md:text-xl text-gray-700 mb-4 sm:mb-6"></p>
+        <div class="bg-gray-100 p-3 sm:p-4 rounded-lg">
+          <p class="text-xs sm:text-sm text-gray-600 mb-1">NIC: <span id="finalNic" class="font-mono font-bold text-xs sm:text-sm break-all"></span></p>
+          <p class="text-xs sm:text-sm text-gray-600 mb-1">Company: <span id="finalCompany" class="font-bold"></span></p>
+          <p class="text-xs sm:text-sm text-gray-600 mb-1">Time: <span id="finalTime" class="font-bold"></span></p>
+          <p id="workHoursDisplay" class="text-xs sm:text-sm text-gray-600 hidden">Work Hours: <span id="finalWorkHours" class="font-bold"></span></p>
         </div>
       </div>
-      <button id="newEntryBtn" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold">
+      <button id="newEntryBtn" class="px-6 sm:px-8 py-2 sm:py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold text-sm sm:text-base w-full max-w-xs sm:max-w-sm">
         New Entry
       </button>
     </div>
 
     <!-- Messages -->
-    <div id="message" class="mt-8 text-center text-lg font-semibold min-h-[3rem]"></div>
+    <div id="message" class="mt-6 sm:mt-8 text-center text-sm sm:text-base md:text-lg font-semibold min-h-[2rem] sm:min-h-[3rem] px-2"></div>
   </div>
   <script>    // DOM elements
     const mainButtons = document.getElementById('mainButtons');
@@ -446,20 +497,24 @@
       if (scanCounter) scanCounter.textContent = '';
       
       scanTitle.textContent = `🔍 Lightning Fast Scanning for ${action.toUpperCase()}`;
-      scanTitle.className = `text-2xl font-bold text-center mb-4 ${action === 'in' ? 'text-green-600' : 'text-red-600'}`;
+      scanTitle.className = `text-lg sm:text-xl md:text-2xl font-bold text-center mb-2 sm:mb-4 px-2 ${action === 'in' ? 'text-green-600' : 'text-red-600'}`;
       
       showMessage('Starting camera...', 'info');
 
       try {
-        // Request fresh camera stream
-        stream = await navigator.mediaDevices.getUserMedia({ 
+        // Mobile-optimized camera constraints
+        const isMobile = window.innerWidth <= 768;
+        const constraints = {
           video: { 
             facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: { ideal: 30 }
-          } 
-        });
+            width: { ideal: isMobile ? 960 : 1280 },
+            height: { ideal: isMobile ? 720 : 720 },
+            frameRate: { ideal: isMobile ? 24 : 30 }
+          }
+        };
+        
+        // Request fresh camera stream
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
         
         video.srcObject = stream;
         
@@ -478,8 +533,9 @@
 
         showMessage(`🔍 ENHANCED SCANNING for ${action.toUpperCase()}... Hold ID card steady in yellow frame`, action === 'in' ? 'success' : 'error');
 
-        // ENHANCED scanning - every 200ms for better reliability
-        intervalId = setInterval(captureAndScan, 200);
+        // Mobile-optimized scanning interval
+        const scanInterval = isMobile ? 300 : 200; // Slightly slower on mobile
+        intervalId = setInterval(captureAndScan, scanInterval);
         
         // Start scanning quickly
         setTimeout(captureAndScan, 150);
@@ -516,9 +572,10 @@
       
       showMessage(`⚡ SCAN ${scanAttempts}... ${currentAction.toUpperCase()} mode - Hold ID steady!`, 'info');
 
-      // Create canvas with optimal size
+      // Create canvas with optimal size - mobile optimized
       const canvas = document.createElement('canvas');
-      const maxSize = 800; // Limit canvas size for speed
+      const isMobile = window.innerWidth <= 768;
+      const maxSize = isMobile ? 600 : 800; // Smaller canvas for mobile
       const aspectRatio = video.videoWidth / video.videoHeight;
       
       if (video.videoWidth > maxSize) {
@@ -542,11 +599,11 @@
 
         try {
           const startTime = Date.now();
+          const timeoutDuration = isMobile ? 4000 : 3000; // Longer timeout for mobile
           const res = await fetch('/scan', {
             method: 'POST',
             body: formData,
-            // Enhanced timeout for better accuracy
-            signal: AbortSignal.timeout(3000)  // 3 seconds for thorough extraction
+            signal: AbortSignal.timeout(timeoutDuration)
           });
 
           const data = await res.json();
@@ -567,17 +624,17 @@
             // Add visual success feedback
             if (scanTimer) {
               scanTimer.textContent = `✅ Complete: ${totalTime}s`;
-              scanTimer.className = 'text-lg font-bold text-green-600 mb-2';
+              scanTimer.className = 'text-base sm:text-lg font-bold text-green-600 mb-1 sm:mb-2';
             }
             if (scanCounter) {
               scanCounter.textContent = `🎯 Success: ${scanAttempts} scans`;
-              scanCounter.className = 'text-sm font-semibold text-green-600 mb-2';
+              scanCounter.className = 'text-xs sm:text-sm font-semibold text-green-600 mb-1 sm:mb-2';
             }
             
-            // INSTANT transition to verification - no delay!
+            // INSTANT transition to verification - slightly longer delay for mobile
             setTimeout(() => {
               showVerification();
-            }, 500); // Reduced from 1200ms to 500ms for faster response
+            }, isMobile ? 800 : 500);
             
             return; // Exit immediately - no more scanning needed!
             
@@ -610,7 +667,7 @@
           // Clear the scan flag to allow next scan
           window.scanInProgress = false;
         }
-      }, 'image/jpeg', 0.9);  // Higher quality for better OCR: 0.9 instead of 0.8
+      }, 'image/jpeg', isMobile ? 0.85 : 0.9);  // Slightly lower quality for mobile to improve speed
     }
 
     // Camera control buttons
@@ -730,14 +787,14 @@
           if (statusData.needs_images) {
             // First-time user or user without complete images - go to capture
             if (statusData.is_first_time) {
-              showMessage('🎉 Welcome to Printcare! Please capture your NIC images for your first check-in.', 'info');
+              showMessage('🎉 Welcome to Printcare! As a new employee, please capture your NIC images for security and identification purposes.', 'info');
             } else {
-              showMessage('📸 NIC images needed for check-in. Please capture front and back images.', 'info');
+              showMessage('📸 NIC images are required for check-in. Please capture clear photos of both sides of your NIC.', 'info');
             }
             showNICCapture();
           } else {
             // Returning user with existing images - proceed directly
-            showMessage('✅ Returning user detected. Processing check-in...', 'success');
+            showMessage('✅ Welcome back! Your NIC images are on file. Processing check-in...', 'success');
             
             const res = await fetch('/record_attendance', {
               method: 'POST',
@@ -802,24 +859,55 @@
 
     // Step 5: Show success
     function showSuccess(data) {
-      hideAllContainers();
-      successContainer.classList.remove('hidden');
+      console.log('📊 showSuccess called with data:', data); // Debug log
       
-      // Special styling for first-time users
-      if (data.is_first_time) {
-        successContainer.querySelector('h3').textContent = '🎉 Welcome to Printcare!';
-        successContainer.querySelector('h3').className = 'text-2xl font-bold text-purple-600 mb-4';
-        successContainer.querySelector('.text-6xl').textContent = '🎊';
-      } else {
-        successContainer.querySelector('h3').textContent = 'Success!';
-        successContainer.querySelector('h3').className = 'text-2xl font-bold text-green-600 mb-4';
-        successContainer.querySelector('.text-6xl').textContent = '🎉';
+      try {
+        hideAllContainers();
+        successContainer.classList.remove('hidden');
+        
+        // Get elements to ensure they exist
+        const emojiDiv = successContainer.querySelector('.text-center > div');
+        const titleH3 = successContainer.querySelector('h3');
+        const messageP = successContainer.querySelector('#successMessage');
+        
+        console.log('📊 Found elements:', { emojiDiv, titleH3, messageP, finalNic, finalCompany, finalTime });
+        
+        // Special styling for first-time users
+        if (data.is_first_time) {
+          if (titleH3) {
+            titleH3.textContent = '🎉 Welcome to Printcare!';
+            titleH3.className = 'text-lg sm:text-xl md:text-2xl font-bold text-purple-600 mb-3 sm:mb-4';
+          }
+          if (emojiDiv) {
+            emojiDiv.textContent = '🎊';
+          }
+          if (messageP) {
+            messageP.textContent = `Welcome to your first day at Printcare! Your check-in has been recorded and your NIC images have been securely saved for future visits.`;
+          }
+        } else {
+          if (titleH3) {
+            titleH3.textContent = 'Success!';
+            titleH3.className = 'text-lg sm:text-xl md:text-2xl font-bold text-green-600 mb-3 sm:mb-4';
+          }
+          if (emojiDiv) {
+            emojiDiv.textContent = '🎉';
+          }
+          if (messageP) {
+            messageP.textContent = data.message || 'Check-in successful!';
+          }
+        }
+        
+        // Ensure we have valid data before setting
+        if (finalNic) finalNic.textContent = data.nic || 'N/A';
+        if (finalCompany) finalCompany.textContent = data.company || 'N/A';
+        if (finalTime) finalTime.textContent = data.time || 'N/A';
+        
+        console.log('📊 Set success data - NIC:', data.nic, 'Company:', data.company, 'Time:', data.time); // Debug log
+        
+      } catch (error) {
+        console.error('❌ Error in showSuccess:', error);
+        showMessage('✅ Check-in successful, but display error occurred.', 'success');
       }
-      
-      successMessage.textContent = data.message;
-      finalNic.textContent = data.nic;
-      finalCompany.textContent = data.company;
-      finalTime.textContent = data.time;
       
       // Show work hours for OUT actions
       if (data.work_hours) {
@@ -884,6 +972,9 @@
       
       updateCaptureInstruction();
       initializeNICCamera();
+      
+      // Show welcome message for first-time users
+      showMessage('📸 Welcome! For security purposes, we need to capture both sides of your NIC card. This is a one-time process.', 'info');
     }
     
     async function initializeNICCamera() {
@@ -892,31 +983,35 @@
           nicCameraStream.getTracks().forEach(track => track.stop());
         }
         
-        nicCameraStream = await navigator.mediaDevices.getUserMedia({
+        // Mobile-optimized NIC camera constraints
+        const isMobile = window.innerWidth <= 768;
+        const constraints = {
           video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: isMobile ? 800 : 1280 },
+            height: { ideal: isMobile ? 600 : 720 },
             facingMode: 'environment'
           }
-        });
+        };
+        
+        nicCameraStream = await navigator.mediaDevices.getUserMedia(constraints);
         
         nicCameraPreview.srcObject = nicCameraStream;
         nicCameraPreview.classList.remove('hidden');
-        showMessage('📸 Camera ready for NIC capture', 'success');
+        showMessage('📸 Camera is ready! Please position your NIC clearly in the camera view.', 'success');
         
       } catch (error) {
         console.error('Camera access error:', error);
-        showMessage('❌ Camera access failed. You can proceed without images.', 'error');
+        showMessage('❌ Camera access failed. You can still proceed without images, but they are recommended for security.', 'error');
       }
     }
     
     function updateCaptureInstruction() {
       if (currentCaptureStep === 'front') {
-        nicCaptureInstruction.textContent = 'Step 1: Capture Front Side of NIC';
-        captureNicBtn.innerHTML = '📷 Capture Front';
+        nicCaptureInstruction.textContent = 'Step 1: Capture Front Side of NIC (with photo and personal details)';
+        captureNicBtn.innerHTML = '📷 Capture Front Side';
       } else {
-        nicCaptureInstruction.textContent = 'Step 2: Capture Back Side of NIC';
-        captureNicBtn.innerHTML = '📷 Capture Back';
+        nicCaptureInstruction.textContent = 'Step 2: Capture Back Side of NIC (with signature and QR code)';
+        captureNicBtn.innerHTML = '📷 Capture Back Side';
       }
     }
     
@@ -985,13 +1080,14 @@
             backImagePreview.src = URL.createObjectURL(imageBlob);
           }
           
-          showMessage(`✅ ${imageType.charAt(0).toUpperCase() + imageType.slice(1)} image saved successfully`, 'success');
+          showMessage(`✅ ${imageType.charAt(0).toUpperCase() + imageType.slice(1)} side of your NIC has been saved successfully!`, 'success');
           
           // Move to next step
           if (currentCaptureStep === 'front') {
             currentCaptureStep = 'back';
             updateCaptureInstruction();
             nicImagesPreview.classList.remove('hidden');
+            showMessage('📸 Great! Now please capture the back side of your NIC.', 'info');
           } else {
             // Both images captured
             stopNICCamera();
@@ -999,7 +1095,7 @@
             captureNicBtn.classList.add('hidden');
             continueAfterCaptureBtn.classList.remove('hidden');
             retakeNicBtn.classList.remove('hidden');
-            showMessage('✅ Both NIC images captured successfully!', 'success');
+            showMessage('🎉 Perfect! Both sides of your NIC have been captured. You can now continue with check-in.', 'success');
           }
           
         } else {
@@ -1014,7 +1110,7 @@
     
     async function submitAttendanceWithImages() {
       try {
-        showMessage('📝 Submitting attendance with NIC images...', 'info');
+        showMessage('📝 Processing your check-in with captured NIC images...', 'info');
         
         const response = await fetch('/record_attendance', {
           method: 'POST',
@@ -1034,26 +1130,39 @@
         
         if (response.ok && data.status === 'success') {
           stopNICCamera();
+          console.log('✅ Backend response data:', data); // Debug log
+          
           showSuccess({
             success: true,
             message: data.message,
             nic: currentNic,
             company: currentCompany,
-            time: data.time
+            time: data.time,
+            is_first_time: data.is_first_time || true  // Use backend value or default to true for image capture flow
           });
         } else {
-          showMessage(data.message || 'Submission failed.', 'error');
+          console.error('❌ Backend error response:', data); // Debug log
+          showMessage(data.message || 'Check-in failed. Please try again.', 'error');
         }
         
       } catch (error) {
-        console.error('Submit attendance error:', error);
-        showMessage('❌ Error submitting attendance', 'error');
+        console.error('❌ Submit attendance error:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          stack: error.stack,
+          currentNic: currentNic,
+          currentCompany: currentCompany,
+          currentAction: currentAction,
+          frontImagePath: frontImagePath,
+          backImagePath: backImagePath
+        });
+        showMessage('❌ Network error during check-in. Please try again.', 'error');
       }
     }
     
     async function submitAttendanceWithoutImages() {
       try {
-        showMessage('📝 Submitting attendance without images...', 'info');
+        showMessage('📝 Processing your check-in without NIC images...', 'info');
         
         const response = await fetch('/record_attendance', {
           method: 'POST',
@@ -1119,6 +1228,100 @@
     continueAfterCaptureBtn.addEventListener('click', () => {
       submitAttendanceWithImages();
     });
+
+    // ========== MOBILE OPTIMIZATIONS ==========
+    
+    // Prevent zoom on iOS when focusing input elements
+    document.addEventListener('DOMContentLoaded', function() {
+      const inputs = document.querySelectorAll('input, select, button');
+      inputs.forEach(input => {
+        input.style.fontSize = '16px'; // Prevent zoom on iOS
+      });
+    });
+    
+    // Handle orientation changes
+    window.addEventListener('orientationchange', function() {
+      setTimeout(() => {
+        // Restart camera if it's currently active
+        if (scanning && currentAction) {
+          startScanning(currentAction);
+        }
+        if (nicCameraStream && !nicCameraPreview.classList.contains('hidden')) {
+          initializeNICCamera();
+        }
+      }, 500);
+    });
+    
+    // Prevent pull-to-refresh on mobile
+    document.addEventListener('touchmove', function(e) {
+      if (e.target.closest('.video, #video, #nicCameraPreview')) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+    
+    // Touch-friendly button feedback
+    const buttons = document.querySelectorAll('button');
+    buttons.forEach(button => {
+      button.addEventListener('touchstart', function(e) {
+        this.style.transform = 'scale(0.95)';
+      });
+      
+      button.addEventListener('touchend', function(e) {
+        this.style.transform = '';
+      });
+    });
+    
+    // Vibration feedback for mobile (if supported)
+    function vibrateFeedback(pattern = [100]) {
+      if ('vibrate' in navigator) {
+        navigator.vibrate(pattern);
+      }
+    }
+    
+    // Add vibration to success and error messages
+    const originalShowMessage = showMessage;
+    showMessage = function(text, type = 'info') {
+      originalShowMessage(text, type);
+      
+      if (type === 'success') {
+        vibrateFeedback([50, 50, 50]); // Short triple vibration for success
+      } else if (type === 'error') {
+        vibrateFeedback([200]); // Long vibration for error
+      }
+    };
+    
+    // Enhanced touch handling for camera scanning
+    if ('ontouchstart' in window) {
+      video.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        // Visual feedback for touch on camera
+        this.style.opacity = '0.8';
+      });
+      
+      video.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        this.style.opacity = '1';
+      });
+    }
+    
+    // Auto-hide mobile keyboard when scanning starts
+    function hideMobileKeyboard() {
+      const activeElement = document.activeElement;
+      if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'SELECT')) {
+        activeElement.blur();
+      }
+    }
+    
+    // Call hideMobileKeyboard when starting camera scanning
+    const originalStartScanning = startScanning;
+    startScanning = function(action) {
+      hideMobileKeyboard();
+      setTimeout(() => {
+        originalStartScanning(action);
+      }, 100); // Small delay to ensure keyboard is hidden
+    };
+    
+    // ========== END MOBILE OPTIMIZATIONS ==========
 
     // Company validation for OUT actions
     async function validateCompanyForOut() {

@@ -20,6 +20,16 @@ from config import DB_CONFIG, ADMIN_CONFIG, COMPANY_MAPPING, COMPANY_DISPLAY_NAM
 # Set Tesseract path
 pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
 
+def close_db_resources(cursor=None, connection=None):
+    """Safely close database resources"""
+    try:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+    except Exception as e:
+        print(f"⚠️ Error closing database resources: {e}")
+
 # Database initialization function
 def initialize_database():
     """Initialize database and create tables if they don't exist"""
@@ -441,16 +451,6 @@ def get_simple_db_connection():
         print(f"❌ Simple database connection error: {err}")
         return None
 
-def close_db_resources(cursor=None, connection=None):
-    """Safely close database resources"""
-    try:
-        if cursor:
-            cursor.close()
-        if connection:
-            connection.close()
-    except Exception as e:
-        print(f"⚠️ Error closing database resources: {e}")
-
 # Security utilities
 def require_admin_auth(f):
     """Decorator to require admin authentication"""
@@ -831,16 +831,35 @@ def record_attendance():
     """Record attendance to database with NIC images"""
     try:
         data = request.get_json()
-        action = data.get('action', '').upper()
-        nic = data.get('nic', '').strip()
-        company = data.get('company', '').strip()
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "Invalid JSON data"
+            }), 400
+            
+        # Safely handle None values and process strings
+        action = data.get('action', '')
+        nic = data.get('nic', '')
+        company = data.get('company', '')
         front_image_path = data.get('front_image_path', '')
         back_image_path = data.get('back_image_path', '')
+        
+        # Convert None to empty string and process
+        if action:
+            action = str(action).strip().upper()
+        if nic:
+            nic = str(nic).strip()
+        if company:
+            company = str(company).strip()
+        if front_image_path:
+            front_image_path = str(front_image_path).strip()
+        if back_image_path:
+            back_image_path = str(back_image_path).strip()
         
         if not all([action, nic, company]):
             return jsonify({
                 "status": "error",
-                "message": "Missing required fields"
+                "message": "Missing required fields: action, nic, and company are required"
             }), 400
         
         # Use fresh database connection to avoid stale connections
@@ -862,6 +881,8 @@ def record_attendance():
         db_company = map_company_to_db(company)
         
         if action == 'IN':
+            print(f"🔍 DEBUG: Processing IN for NIC {nic}, Company {company} -> {db_company}")
+            
             # Check if this is a first-time user
             cursor.execute("""
                 SELECT COUNT(*) FROM AttendanceRecords WHERE NIC = %s
@@ -877,6 +898,8 @@ def record_attendance():
             front_img = front_image_path if front_image_path else ''
             back_img = back_image_path if back_image_path else ''
             
+            print(f"🔍 DEBUG: About to insert - NIC: {nic}, Date: {today}, Time: {now}, Shift: {shift}, Company: {db_company}")
+            
             cursor.execute(
                 """INSERT INTO AttendanceRecords 
                    (NIC, Date, InTime, Shift, Status, Company, FrontNICImage, BackNICImage) 
@@ -884,6 +907,8 @@ def record_attendance():
                 (nic, today, now, shift, 'Check in', db_company, front_img, back_img)
             )
             connection.commit()
+            
+            print(f"✅ DEBUG: Successfully inserted attendance record for {nic}")
             
             # Prepare success message based on first-time status
             if is_first_time:
@@ -987,7 +1012,10 @@ def record_attendance():
             })
         
     except Exception as e:
-        print(f"Database error: {e}")
+        print(f"❌ Database error in record_attendance: {e}")
+        print(f"❌ Error details - Action: {action if 'action' in locals() else 'unknown'}, NIC: {nic if 'nic' in locals() else 'unknown'}, Company: {company if 'company' in locals() else 'unknown'}")
+        import traceback
+        print(f"❌ Full traceback: {traceback.format_exc()}")
         return jsonify({
             "status": "error",
             "message": f"Database error: {str(e)}"
@@ -1864,8 +1892,20 @@ def check_nic_status():
     """Check if NIC user is first-time or returning user"""
     try:
         data = request.get_json()
-        nic = data.get('nic', '').strip()
-        action = data.get('action', '').upper()
+        if not data:
+            return jsonify({
+                "success": False,
+                "message": "Invalid JSON data"
+            }), 400
+            
+        nic = data.get('nic', '')
+        action = data.get('action', '')
+        
+        # Safely handle None values and strip/uppercase
+        if nic:
+            nic = str(nic).strip()
+        if action:
+            action = str(action).strip().upper()
         
         if not nic or not action:
             return jsonify({
@@ -1904,22 +1944,31 @@ def check_nic_status():
         result = cursor.fetchone()
         record_count, front_count, back_count = result
         
-        # Check if NIC images exist on disk
+        # Check if NIC images exist on disk (only for users with database records)
         front_image_exists = False
         back_image_exists = False
         
-        front_path = os.path.join(app.config['UPLOAD_FOLDER'], 'front', f"{nic}_front.jpg")
-        back_path = os.path.join(app.config['UPLOAD_FOLDER'], 'back', f"{nic}_back.jpg")
-        
-        if os.path.exists(front_path):
-            front_image_exists = True
-        if os.path.exists(back_path):
-            back_image_exists = True
+        # Only check for disk images if user has existing database records
+        if record_count > 0:
+            front_path = os.path.join(app.config['UPLOAD_FOLDER'], 'front', f"{nic}_front.jpg")
+            back_path = os.path.join(app.config['UPLOAD_FOLDER'], 'back', f"{nic}_back.jpg")
+            
+            if os.path.exists(front_path):
+                front_image_exists = True
+            if os.path.exists(back_path):
+                back_image_exists = True
         
         # Determine if images are needed
-        has_complete_images = (front_count > 0 and back_count > 0) or (front_image_exists and back_image_exists)
         is_first_time = record_count == 0
-        needs_images = not has_complete_images
+        
+        # First-time users ALWAYS need to capture images
+        if is_first_time:
+            needs_images = True
+            has_complete_images = False
+        else:
+            # For returning users, check if they have complete images in DB or on disk
+            has_complete_images = (front_count > 0 and back_count > 0) or (front_image_exists and back_image_exists)
+            needs_images = not has_complete_images
         
         print(f"🔍 NIC Status Check for {nic}:")
         print(f"   Records: {record_count}, Front: {front_count}, Back: {back_count}")
@@ -1952,8 +2001,20 @@ def get_nic_company():
     """Get all active companies for an NIC to help with OUT validation"""
     try:
         data = request.get_json()
-        nic = data.get('nic', '').strip()
-        action = data.get('action', '').upper()
+        if not data:
+            return jsonify({
+                "success": False,
+                "message": "Invalid JSON data"
+            }), 400
+            
+        nic = data.get('nic', '')
+        action = data.get('action', '')
+        
+        # Safely handle None values
+        if nic:
+            nic = str(nic).strip()
+        if action:
+            action = str(action).strip().upper()
         
         if not nic:
             return jsonify({

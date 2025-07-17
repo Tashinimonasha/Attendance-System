@@ -305,16 +305,148 @@
         .theme-toggle:hover {
             transform: scale(1.1);
         }
+        
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            /* Hide sidebar by default on mobile */
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            
+            /* Adjust main content for mobile */
+            .main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+            
+            /* Mobile header adjustments */
+            .mobile-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            /* Stack cards vertically on mobile */
+            .mobile-stack {
+                grid-template-columns: 1fr !important;
+            }
+            
+            /* Table horizontal scroll on mobile */
+            .mobile-table {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Smaller text on mobile */
+            .mobile-text {
+                font-size: 0.875rem;
+            }
+            
+            /* Hide some columns on mobile */
+            .mobile-hide {
+                display: none;
+            }
+            
+            /* Mobile filter adjustments */
+            .mobile-filters {
+                grid-template-columns: 1fr !important;
+                gap: 0.75rem;
+            }
+            
+            /* Mobile padding adjustments */
+            .mobile-padding {
+                padding: 1rem !important;
+            }
+            
+            /* Mobile button stack */
+            .mobile-button-stack {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            /* Chart container mobile responsive */
+            .mobile-chart {
+                height: 250px !important;
+            }
+            
+            /* Theme toggle position adjustment for mobile */
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+                width: 40px;
+                height: 40px;
+            }
+            
+            /* Mobile overlay for sidebar */
+            .mobile-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 40;
+                display: none;
+            }
+            
+            .mobile-overlay.active {
+                display: block;
+            }
+        }
+        
+        /* Tablet responsive styles */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .tablet-grid-2 {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+            
+            .tablet-padding {
+                padding: 1.5rem !important;
+            }
+        }
+        
+        /* Mobile hamburger menu */
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 60;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            box-shadow: var(--card-shadow);
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50">
+    <!-- Mobile Menu Button -->
+    <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" title="Toggle Menu">
+        <i id="mobile-menu-icon" class="fas fa-bars theme-text"></i>
+    </button>
+    
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="mobile-overlay" onclick="closeMobileSidebar()"></div>
+
     <!-- Theme Toggle Button -->
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
         <i id="theme-icon" class="fas fa-moon theme-text"></i>
     </button>
 
     <!-- Sidebar -->
-    <div class="fixed inset-y-0 left-0 z-50 w-64 sidebar-gradient shadow-2xl">
+    <div id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 w-64 sidebar-gradient shadow-2xl">
         <div class="flex items-center justify-center h-20 bg-black/20">
             <h1 class="text-2xl font-bold sidebar-title">
                 <i class="fas fa-chart-line mr-2 text-blue-400"></i>
@@ -354,12 +486,12 @@
     </div>
 
     <!-- Main Content -->
-    <div class="ml-64">        <!-- Top Header -->
+    <div id="main-content" class="main-content ml-64">        <!-- Top Header -->
         <header class="theme-card shadow-sm border-b" style="border-color: var(--border-color)">
-            <div class="flex items-center justify-between px-8 py-4">
+            <div class="mobile-header flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
                 <div>
-                    <h2 class="text-3xl font-bold theme-text">Dashboard</h2>
-                    <p class="theme-text-secondary">Welcome back, Admin!</p>
+                    <h2 class="text-xl sm:text-2xl lg:text-3xl font-bold theme-text">Dashboard</h2>
+                    <p class="theme-text-secondary text-sm sm:text-base">Welcome back, Admin!</p>
                 </div>
                 
                 <!-- Success Message Display Area -->
@@ -367,10 +499,10 @@
                     {% if messages %}
                         {% for category, message in messages %}
                             {% if category == 'success' %}
-                                <div id="successMessage" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg flex items-center">
+                                <div id="successMessage" class="bg-green-100 border border-green-400 text-green-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg flex items-center text-sm sm:text-base">
                                     <i class="fas fa-check-circle mr-2"></i>
-                                    {{ message }}
-                                    <button onclick="closeMessage()" class="ml-4 text-green-500 hover:text-green-700">
+                                    <span class="mobile-text">{{ message }}</span>
+                                    <button onclick="closeMessage()" class="ml-2 sm:ml-4 text-green-500 hover:text-green-700">
                                         <i class="fas fa-times"></i>
                                     </button>
                                 </div>
@@ -379,15 +511,15 @@
                     {% endif %}
                 {% endwith %}
                 
-                <div class="flex items-center space-x-4">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
                     <!-- Date Picker -->
                     <div class="flex items-center space-x-2">
                         <i class="fas fa-calendar-alt text-gray-500"></i>
-                        <input type="date" id="dateFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                        <input type="date" id="dateFilter" class="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base" 
                                value="" onchange="updateDashboard()">
                     </div>
                     <!-- Recent Update Indicator -->
-                    <div class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                    <div class="bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
                         <i class="fas fa-sync-alt mr-1"></i>
                         Live Data
                     </div>
@@ -396,186 +528,186 @@
         </header>
 
         <!-- Dashboard Section -->
-        <div id="dashboard-section" class="p-8">
+        <div id="dashboard-section" class="mobile-padding p-4 sm:p-6 lg:p-8">
             <!-- Summary Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="mobile-stack grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 <!-- Total Workers Card -->
-                <div class="stat-card rounded-xl p-6 shadow-lg card-hover border border-gray-100">
+                <div class="stat-card rounded-xl p-4 sm:p-6 shadow-lg card-hover border border-gray-100">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-gray-600 text-sm font-medium">Total Workers</p>
-                            <p id="totalWorkers" class="text-3xl font-bold text-gray-800">122</p>
-                            <p class="text-green-600 text-sm mt-1">
+                            <p class="text-gray-600 text-xs sm:text-sm font-medium">Total Workers</p>
+                            <p id="totalWorkers" class="text-2xl sm:text-3xl font-bold text-gray-800">122</p>
+                            <p class="text-green-600 text-xs sm:text-sm mt-1">
                                 <i class="fas fa-arrow-up mr-1"></i>
                                 +12% from yesterday
                             </p>
                         </div>
-                        <div class="bg-blue-100 p-3 rounded-full">
-                            <i class="fas fa-users text-blue-600 text-xl"></i>
+                        <div class="bg-blue-100 p-2 sm:p-3 rounded-full">
+                            <i class="fas fa-users text-blue-600 text-lg sm:text-xl"></i>
                         </div>
                     </div>
                 </div>
 
                 <!-- Total Hours Card -->
-                <div class="stat-card rounded-xl p-6 shadow-lg card-hover border border-gray-100">
+                <div class="stat-card rounded-xl p-4 sm:p-6 shadow-lg card-hover border border-gray-100">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-gray-600 text-sm font-medium">Total Hours</p>
-                            <p id="totalHours" class="text-3xl font-bold text-gray-800">867h</p>
-                            <p class="text-green-600 text-sm mt-1">
+                            <p class="text-gray-600 text-xs sm:text-sm font-medium">Total Hours</p>
+                            <p id="totalHours" class="text-2xl sm:text-3xl font-bold text-gray-800">867h</p>
+                            <p class="text-green-600 text-xs sm:text-sm mt-1">
                                 <i class="fas fa-arrow-up mr-1"></i>
                                 +8% from yesterday
                             </p>
                         </div>
-                        <div class="bg-green-100 p-3 rounded-full">
-                            <i class="fas fa-clock text-green-600 text-xl"></i>
+                        <div class="bg-green-100 p-2 sm:p-3 rounded-full">
+                            <i class="fas fa-clock text-green-600 text-lg sm:text-xl"></i>
                         </div>
                     </div>
                 </div>
 
                 <!-- Average Hours Card -->
-                <div class="stat-card rounded-xl p-6 shadow-lg card-hover border border-gray-100">
+                <div class="stat-card rounded-xl p-4 sm:p-6 shadow-lg card-hover border border-gray-100">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-gray-600 text-sm font-medium">Avg Hours/Worker</p>
-                            <p id="avgHours" class="text-3xl font-bold text-gray-800">7.1h</p>
-                            <p class="text-yellow-600 text-sm mt-1">
+                            <p class="text-gray-600 text-xs sm:text-sm font-medium">Avg Hours/Worker</p>
+                            <p id="avgHours" class="text-2xl sm:text-3xl font-bold text-gray-800">7.1h</p>
+                            <p class="text-yellow-600 text-xs sm:text-sm mt-1">
                                 <i class="fas fa-minus mr-1"></i>
                                 -2% from yesterday
                             </p>
                         </div>
-                        <div class="bg-yellow-100 p-3 rounded-full">
-                            <i class="fas fa-chart-line text-yellow-600 text-xl"></i>
+                        <div class="bg-yellow-100 p-2 sm:p-3 rounded-full">
+                            <i class="fas fa-chart-line text-yellow-600 text-lg sm:text-xl"></i>
                         </div>
                     </div>
                 </div>
 
                 <!-- Active Today Card -->
-                <div class="stat-card rounded-xl p-6 shadow-lg card-hover border border-gray-100">
+                <div class="stat-card rounded-xl p-4 sm:p-6 shadow-lg card-hover border border-gray-100">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-gray-600 text-sm font-medium">Active Today</p>
-                            <p id="activeToday" class="text-3xl font-bold text-gray-800">89</p>
-                            <p class="text-blue-600 text-sm mt-1">
+                            <p class="text-gray-600 text-xs sm:text-sm font-medium">Active Today</p>
+                            <p id="activeToday" class="text-2xl sm:text-3xl font-bold text-gray-800">89</p>
+                            <p class="text-blue-600 text-xs sm:text-sm mt-1">
                                 <i class="fas fa-arrow-up mr-1"></i>
                                 73% attendance rate
                             </p>
                         </div>
-                        <div class="bg-purple-100 p-3 rounded-full">
-                            <i class="fas fa-user-check text-purple-600 text-xl"></i>
+                        <div class="bg-purple-100 p-2 sm:p-3 rounded-full">
+                            <i class="fas fa-user-check text-purple-600 text-lg sm:text-xl"></i>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Dashboard Charts Section -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="mobile-stack grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 <!-- Daily Workers Bar Chart -->
-                <div class="theme-card rounded-xl p-6 shadow-lg border" style="border-color: var(--border-color)">
+                <div class="theme-card rounded-xl p-4 sm:p-6 shadow-lg border" style="border-color: var(--border-color)">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold theme-text">
+                        <h3 class="text-base sm:text-lg font-semibold theme-text">
                             <i class="fas fa-chart-bar mr-2 text-blue-600"></i>
                             Daily Workers Count
                         </h3>
-                        <div class="text-sm theme-text-secondary">
+                        <div class="text-xs sm:text-sm theme-text-secondary">
                             Last 7 Days
                         </div>
                     </div>
-                    <div style="height: 300px;">
-                        <canvas id="dailyWorkersChart" height="300"></canvas>
+                    <div class="mobile-chart" style="height: 250px;">
+                        <canvas id="dailyWorkersChart" height="250"></canvas>
                     </div>
                 </div>
 
                 <!-- Work Hours Distribution Pie Chart -->
-                <div class="theme-card rounded-xl p-6 shadow-lg border" style="border-color: var(--border-color)">
+                <div class="theme-card rounded-xl p-4 sm:p-6 shadow-lg border" style="border-color: var(--border-color)">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold theme-text">
+                        <h3 class="text-base sm:text-lg font-semibold theme-text">
                             <i class="fas fa-chart-pie mr-2 text-green-600"></i>
                             Work Hours Distribution
                         </h3>
-                        <div class="text-sm theme-text-secondary">
+                        <div class="text-xs sm:text-sm theme-text-secondary">
                             Today's Total
                         </div>
                     </div>
-                    <div style="height: 300px;">
-                        <canvas id="workHoursChart" height="300"></canvas>
+                    <div class="mobile-chart" style="height: 250px;">
+                        <canvas id="workHoursChart" height="250"></canvas>
                     </div>
                 </div>
             </div>
 
             <!-- Additional Charts Row -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="mobile-stack grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 <!-- Department Wise Workers (Pie Chart) -->
-                <div class="theme-card rounded-xl p-6 shadow-lg border" style="border-color: var(--border-color)">
+                <div class="theme-card rounded-xl p-4 sm:p-6 shadow-lg border" style="border-color: var(--border-color)">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold theme-text">
+                        <h3 class="text-base sm:text-lg font-semibold theme-text">
                             <i class="fas fa-users mr-2 text-purple-600"></i>
                             Department Distribution
                         </h3>
-                        <div class="text-sm theme-text-secondary">
+                        <div class="text-xs sm:text-sm theme-text-secondary">
                             Active Workers
                         </div>
                     </div>
-                    <div style="height: 300px;">
-                        <canvas id="departmentChart" height="300"></canvas>
+                    <div class="mobile-chart" style="height: 250px;">
+                        <canvas id="departmentChart" height="250"></canvas>
                     </div>
                 </div>
 
                 <!-- Weekly Performance Bar Chart -->
-                <div class="theme-card rounded-xl p-6 shadow-lg border" style="border-color: var(--border-color)">
+                <div class="theme-card rounded-xl p-4 sm:p-6 shadow-lg border" style="border-color: var(--border-color)">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold theme-text">
+                        <h3 class="text-base sm:text-lg font-semibold theme-text">
                             <i class="fas fa-chart-line mr-2 text-orange-600"></i>
                             Weekly Performance
                         </h3>
-                        <div class="text-sm theme-text-secondary">
+                        <div class="text-xs sm:text-sm theme-text-secondary">
                             Hours vs Target
                         </div>
                     </div>
-                    <div style="height: 300px;">
-                        <canvas id="weeklyPerformanceChart" height="300"></canvas>
+                    <div class="mobile-chart" style="height: 250px;">
+                        <canvas id="weeklyPerformanceChart" height="250"></canvas>
                     </div>
                 </div>
             </div>
 
             <!-- Recent Activity Table - Enhanced with better filtering -->
             <div class="theme-card rounded-xl shadow-lg border mb-4" style="border-color: var(--border-color)">
-                <div class="p-4 border-b" style="border-color: var(--border-color)">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-md font-semibold theme-text">
+                <div class="p-3 sm:p-4 border-b" style="border-color: var(--border-color)">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 space-y-2 sm:space-y-0">
+                        <h3 class="text-sm sm:text-md font-semibold theme-text">
                             <i class="fas fa-table mr-2 text-purple-600"></i>
                             Recent Attendance
                         </h3>
-                        <button onclick="generateReport()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 text-sm rounded-lg transition-colors duration-200">
+                        <button onclick="generateReport()" class="bg-blue-600 hover:bg-blue-700 text-white px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm rounded-lg transition-colors duration-200 w-full sm:w-auto">
                             <i class="fas fa-download mr-1"></i>
                             Export
                         </button>
                     </div>
                     
                     <!-- Enhanced Filter Section -->
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div class="mobile-filters grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                         <div>
                             <label class="block text-xs font-medium theme-text-secondary mb-1">Search by NIC</label>
                             <input type="text" id="nicFilter" placeholder="Enter NIC number..." 
-                                   class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
+                                   class="w-full px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
                                    onkeyup="filterAttendanceTable()">
                         </div>
                         <div>
                             <label class="block text-xs font-medium theme-text-secondary mb-1">Search by Company</label>
                             <input type="text" id="companyFilter" placeholder="Enter company name..." 
-                                   class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
+                                   class="w-full px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
                                    onkeyup="filterAttendanceTable()">
                         </div>
                         <div>
                             <label class="block text-xs font-medium theme-text-secondary mb-1">Filter by Date</label>
                             <input type="date" id="attendanceDateFilter" 
-                                   class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
+                                   class="w-full px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
                                    onchange="filterAttendanceTable()">
                         </div>
                         <div>
                             <label class="block text-xs font-medium theme-text-secondary mb-1">Status Filter</label>
                             <select id="statusFilter" onchange="filterAttendanceTable()" 
-                                    class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input">
+                                    class="w-full px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input">
                                 <option value="">All Status</option>
                                 <option value="IN">Check In</option>
                                 <option value="COMPLETED">Completed</option>
@@ -585,24 +717,24 @@
                     </div>
                     
                     <!-- Clear Filters Button -->
-                    <div class="mt-3 flex justify-end">
-                        <button onclick="clearAttendanceFilters()" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 text-xs rounded-lg transition-colors duration-200">
+                    <div class="mt-2 sm:mt-3 flex justify-end">
+                        <button onclick="clearAttendanceFilters()" class="bg-gray-500 hover:bg-gray-600 text-white px-2 sm:px-3 py-1 text-xs rounded-lg transition-colors duration-200">
                             <i class="fas fa-times mr-1"></i>
                             Clear Filters
                         </button>
                     </div>
                 </div>
                 
-                <div class="overflow-x-auto">
-                    <table class="w-full">
+                <div class="mobile-table overflow-x-auto">
+                    <table class="w-full min-w-full">
                         <thead class="table-header">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">NIC Number</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Company</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Date</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">IN Time</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">OUT Time</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Status</th>
+                                <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">NIC Number</th>
+                                <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Company</th>
+                                <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary mobile-hide">Date</th>
+                                <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">IN Time</th>
+                                <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary mobile-hide">OUT Time</th>
+                                <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Status</th>
                             </tr>
                         </thead>
                         <tbody id="attendanceTable" class="divide-y divide-gray-200">
@@ -611,9 +743,9 @@
                     </table>
                 </div>
                 
-                <div class="px-4 py-3 border-t theme-card" style="border-color: var(--border-color)">
-                    <div class="flex items-center justify-between">
-                        <p class="text-sm theme-text-secondary">
+                <div class="px-3 sm:px-4 py-2 sm:py-3 border-t theme-card" style="border-color: var(--border-color)">
+                    <div class="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+                        <p class="text-xs sm:text-sm theme-text-secondary">
                             Showing <span id="showingCount">1-10</span> of <span id="totalCount">50</span> results
                         </p>
                         <div class="flex items-center space-x-2">
@@ -630,10 +762,10 @@
         </div>
 
         <!-- Workers Section (Hidden by default) -->
-        <div id="workers-section" class="p-8 hidden">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold theme-text">Worker Management</h2>
-                <button onclick="refreshWorkers()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
+        <div id="workers-section" class="mobile-padding p-4 sm:p-6 lg:p-8 hidden">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 space-y-2 sm:space-y-0">
+                <h2 class="text-xl sm:text-2xl font-bold theme-text">Worker Management</h2>
+                <button onclick="refreshWorkers()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors duration-200 text-sm sm:text-base w-full sm:w-auto">
                     <i class="fas fa-sync-alt mr-2"></i>
                     Refresh
                 </button>
@@ -641,42 +773,42 @@
             
             <!-- Workers Table -->
             <div class="theme-card rounded-xl shadow-lg border">
-                <div class="p-4 border-b" style="border-color: var(--border-color)">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold theme-text">
+                <div class="p-3 sm:p-4 border-b" style="border-color: var(--border-color)">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 space-y-2 sm:space-y-0">
+                        <h3 class="text-base sm:text-lg font-semibold theme-text">
                             <i class="fas fa-users mr-2 text-blue-600"></i>
                             All Workers Database
                         </h3>
-                        <button onclick="refreshWorkers()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
+                        <button onclick="refreshWorkers()" class="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors duration-200 text-sm sm:text-base w-full sm:w-auto">
                             <i class="fas fa-sync-alt mr-2"></i>
                             Refresh Data
                         </button>
                     </div>
                     
                     <!-- Enhanced Filter Section for Workers -->
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+                    <div class="mobile-filters grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-3 sm:mb-4">
                         <div>
                             <label class="block text-xs font-medium theme-text-secondary mb-1">Search by NIC</label>
                             <input type="text" id="workerNicSearch" placeholder="Enter NIC number..." 
-                                   class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
+                                   class="w-full px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
                                    onkeyup="filterWorkersTable()">
                         </div>
                         <div>
                             <label class="block text-xs font-medium theme-text-secondary mb-1">Search by Company</label>
                             <input type="text" id="workerCompanySearch" placeholder="Enter company name..." 
-                                   class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
+                                   class="w-full px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
                                    onkeyup="filterWorkersTable()">
                         </div>
                         <div>
                             <label class="block text-xs font-medium theme-text-secondary mb-1">Last Active Date</label>
                             <input type="date" id="workerDateFilter" 
-                                   class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
+                                   class="w-full px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input"
                                    onchange="filterWorkersTable()">
                         </div>
                         <div>
                             <label class="block text-xs font-medium theme-text-secondary mb-1">Status Filter</label>
                             <select id="workerStatusFilter" onchange="filterWorkersTable()" 
-                                    class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input">
+                                    class="w-full px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 theme-input">
                                 <option value="">All Status</option>
                                 <option value="ACTIVE">Active Today</option>
                                 <option value="IN">Checked In</option>
@@ -684,7 +816,7 @@
                             </select>
                         </div>
                         <div class="flex items-end">
-                            <button onclick="clearWorkerFilters()" class="w-full bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 text-sm rounded-lg transition-colors duration-200">
+                            <button onclick="clearWorkerFilters()" class="w-full bg-gray-500 hover:bg-gray-600 text-white px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm rounded-lg transition-colors duration-200">
                                 <i class="fas fa-times mr-1"></i>
                                 Clear All
                             </button>
@@ -692,17 +824,17 @@
                     </div>
                 </div>
                 
-                <div class="overflow-x-auto">
-                    <table class="w-full">
+                <div class="mobile-table overflow-x-auto">
+                    <table class="w-full min-w-full">
                         <thead class="table-header">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">NIC Number</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Company</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Shift</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Status</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Last Date</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Total Records</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Actions</th>
+                                <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">NIC Number</th>
+                                <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Company</th>
+                                <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary mobile-hide">Shift</th>
+                                <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Status</th>
+                                <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary mobile-hide">Last Date</th>
+                                <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary mobile-hide">Total Records</th>
+                                <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider theme-text-secondary">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="workersTable" class="divide-y divide-gray-200">
@@ -711,16 +843,16 @@
                     </table>
                 </div>
                 
-                <div class="px-4 py-3 border-t" style="background-color: var(--bg-primary); border-color: var(--border-color)">
-                    <div class="flex items-center justify-between">
-                        <p class="text-sm theme-text-secondary">
+                <div class="px-3 sm:px-4 py-2 sm:py-3 border-t" style="background-color: var(--bg-primary); border-color: var(--border-color)">
+                    <div class="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+                        <p class="text-xs sm:text-sm theme-text-secondary">
                             Showing <span id="workersShowingCount">1-10</span> of <span id="workersTotalCount">0</span> workers
                         </p>
                         <div class="flex items-center space-x-2">
-                            <button onclick="previousWorkersPage()" class="px-3 py-1 text-sm font-medium border rounded hover:bg-gray-50 theme-card theme-text" style="border-color: var(--border-color)">
+                            <button onclick="previousWorkersPage()" class="px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium border rounded hover:bg-gray-50 theme-card theme-text" style="border-color: var(--border-color)">
                                 Previous
                             </button>
-                            <button onclick="nextWorkersPage()" class="px-3 py-1 text-sm font-medium border rounded hover:bg-gray-50 theme-card theme-text" style="border-color: var(--border-color)">
+                            <button onclick="nextWorkersPage()" class="px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium border rounded hover:bg-gray-50 theme-card theme-text" style="border-color: var(--border-color)">
                                 Next
                             </button>
                         </div>
@@ -730,74 +862,74 @@
         </div>
 
         <!-- Analytics Section (Hidden by default) -->
-        <div id="analytics-section" class="p-8 hidden">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold theme-text">Advanced Analytics</h2>
-                <div class="flex items-center space-x-3">
-                    <select id="analyticsFilter" onchange="updateAnalytics()" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 theme-card theme-text" style="border-color: var(--border-color)">
+        <div id="analytics-section" class="mobile-padding p-4 sm:p-6 lg:p-8 hidden">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 space-y-3 sm:space-y-0">
+                <h2 class="text-xl sm:text-2xl font-bold theme-text">Advanced Analytics</h2>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                    <select id="analyticsFilter" onchange="updateAnalytics()" class="px-3 sm:px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 theme-card theme-text text-sm sm:text-base w-full sm:w-auto" style="border-color: var(--border-color)">
                         <option value="daily">Daily View</option>
                         <option value="weekly">Weekly View</option>
                         <option value="monthly">Monthly View</option>
                     </select>
-                    <input type="date" id="analyticsDate" onchange="updateAnalytics()" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 theme-card theme-text" style="border-color: var(--border-color)">
+                    <input type="date" id="analyticsDate" onchange="updateAnalytics()" class="px-3 sm:px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 theme-card theme-text text-sm sm:text-base w-full sm:w-auto" style="border-color: var(--border-color)">
                 </div>
             </div>
             
             <!-- Analytics Charts Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="mobile-stack grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
                 <!-- Attendance Chart -->
-                <div class="theme-card rounded-xl p-6 shadow-lg border" style="border-color: var(--border-color)">
-                    <h3 class="text-lg font-semibold theme-text mb-4">
+                <div class="theme-card rounded-xl p-4 sm:p-6 shadow-lg border" style="border-color: var(--border-color)">
+                    <h3 class="text-base sm:text-lg font-semibold theme-text mb-4">
                         <i class="fas fa-chart-bar mr-2 text-blue-600"></i>
                         Attendance Overview
                     </h3>
-                    <canvas id="analyticsAttendanceChart" height="250"></canvas>
+                    <canvas id="analyticsAttendanceChart" height="250" class="mobile-chart"></canvas>
                 </div>
 
                 <!-- Hours Chart -->
-                <div class="theme-card rounded-xl p-6 shadow-lg border" style="border-color: var(--border-color)">
-                    <h3 class="text-lg font-semibold theme-text mb-4">
+                <div class="theme-card rounded-xl p-4 sm:p-6 shadow-lg border" style="border-color: var(--border-color)">
+                    <h3 class="text-base sm:text-lg font-semibold theme-text mb-4">
                         <i class="fas fa-clock mr-2 text-green-600"></i>
                         Work Hours Analysis
                     </h3>
-                    <canvas id="analyticsHoursChart" height="250"></canvas>
+                    <canvas id="analyticsHoursChart" height="250" class="mobile-chart"></canvas>
                 </div>
             </div>
             
             <!-- Performance Metrics -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="theme-card rounded-xl p-6 shadow-lg border card-hover" style="border-color: var(--border-color)">
+            <div class="mobile-stack grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                <div class="theme-card rounded-xl p-4 sm:p-6 shadow-lg border card-hover" style="border-color: var(--border-color)">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="theme-text-secondary text-sm font-medium">Peak Hours</p>
-                            <p id="peakHours" class="text-2xl font-bold theme-text">9-11 AM</p>
+                            <p class="theme-text-secondary text-xs sm:text-sm font-medium">Peak Hours</p>
+                            <p id="peakHours" class="text-xl sm:text-2xl font-bold theme-text">9-11 AM</p>
                         </div>
-                        <div class="bg-blue-100 p-3 rounded-full">
-                            <i class="fas fa-chart-line text-blue-600 text-xl"></i>
+                        <div class="bg-blue-100 p-2 sm:p-3 rounded-full">
+                            <i class="fas fa-chart-line text-blue-600 text-lg sm:text-xl"></i>
                         </div>
                     </div>
                 </div>
                 
-                <div class="theme-card rounded-xl p-6 shadow-lg border card-hover" style="border-color: var(--border-color)">
+                <div class="theme-card rounded-xl p-4 sm:p-6 shadow-lg border card-hover" style="border-color: var(--border-color)">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="theme-text-secondary text-sm font-medium">Efficiency Rate</p>
-                            <p id="efficiencyRate" class="text-2xl font-bold theme-text">94.5%</p>
+                            <p class="theme-text-secondary text-xs sm:text-sm font-medium">Efficiency Rate</p>
+                            <p id="efficiencyRate" class="text-xl sm:text-2xl font-bold theme-text">94.5%</p>
                         </div>
-                        <div class="bg-green-100 p-3 rounded-full">
-                            <i class="fas fa-percentage text-green-600 text-xl"></i>
+                        <div class="bg-green-100 p-2 sm:p-3 rounded-full">
+                            <i class="fas fa-percentage text-green-600 text-lg sm:text-xl"></i>
                         </div>
                     </div>
                 </div>
                 
-                <div class="theme-card rounded-xl p-6 shadow-lg border card-hover" style="border-color: var(--border-color)">
+                <div class="theme-card rounded-xl p-4 sm:p-6 shadow-lg border card-hover" style="border-color: var(--border-color)">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="theme-text-secondary text-sm font-medium">Trend</p>
-                            <p id="trendIndicator" class="text-2xl font-bold text-green-600">↗ +12%</p>
+                            <p class="theme-text-secondary text-xs sm:text-sm font-medium">Trend</p>
+                            <p id="trendIndicator" class="text-xl sm:text-2xl font-bold text-green-600">↗ +12%</p>
                         </div>
-                        <div class="bg-purple-100 p-3 rounded-full">
-                            <i class="fas fa-trending-up text-purple-600 text-xl"></i>
+                        <div class="bg-purple-100 p-2 sm:p-3 rounded-full">
+                            <i class="fas fa-trending-up text-purple-600 text-lg sm:text-xl"></i>
                         </div>
                     </div>
                 </div>
@@ -805,14 +937,14 @@
         </div>
 
         <!-- Reports Section (Hidden by default) -->
-        <div id="reports-section" class="p-8 hidden">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">Reports</h2>
+        <div id="reports-section" class="mobile-padding p-4 sm:p-6 lg:p-8 hidden">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Reports</h2>
             <!-- Reports content here -->
         </div>
 
         <!-- Settings Section (Hidden by default) -->
-        <div id="settings-section" class="p-8 hidden">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">Settings</h2>
+        <div id="settings-section" class="mobile-padding p-4 sm:p-6 lg:p-8 hidden">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Settings</h2>
             <!-- Settings content here -->
         </div>
     </div>
@@ -852,6 +984,80 @@
         let workersTotalPages = 1;
         let workersData = [];
         let analyticsChart1, analyticsChart2;
+        let isMobile = window.innerWidth <= 768;
+
+        // Mobile sidebar functions
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            const icon = document.getElementById('mobile-menu-icon');
+            
+            if (sidebar.classList.contains('mobile-open')) {
+                closeMobileSidebar();
+            } else {
+                sidebar.classList.add('mobile-open');
+                overlay.classList.add('active');
+                icon.className = 'fas fa-times theme-text';
+            }
+        }
+
+        function closeMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            const icon = document.getElementById('mobile-menu-icon');
+            
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+            icon.className = 'fas fa-bars theme-text';
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const wasMobile = isMobile;
+            isMobile = window.innerWidth <= 768;
+            
+            if (wasMobile !== isMobile) {
+                // Responsive breakpoint changed
+                if (!isMobile) {
+                    // Switched to desktop - ensure sidebar is visible and overlay is hidden
+                    closeMobileSidebar();
+                    document.getElementById('main-content').style.marginLeft = '';
+                } else {
+                    // Switched to mobile - hide sidebar by default
+                    closeMobileSidebar();
+                }
+                
+                // Refresh charts for new viewport
+                setTimeout(() => {
+                    if (window.Chart) {
+                        Chart.helpers.each(Chart.instances, function(instance) {
+                            instance.resize();
+                        });
+                    }
+                }, 100);
+            }
+        });
+
+        // Touch event handlers for mobile
+        if ('ontouchstart' in window) {
+            document.addEventListener('touchstart', function(e) {
+                // Add touch feedback for buttons
+                if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                    const button = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
+                    button.style.transform = 'scale(0.95)';
+                }
+            });
+            
+            document.addEventListener('touchend', function(e) {
+                // Remove touch feedback
+                if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                    const button = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
+                    setTimeout(() => {
+                        button.style.transform = '';
+                    }, 100);
+                }
+            });
+        }
 
         // Initialize dashboard with enhanced styling and login check
         document.addEventListener('DOMContentLoaded', function() {
@@ -991,9 +1197,14 @@
             }
         }
 
-        // Navigation functions with better error handling
+        // Navigation functions with better error handling and mobile support
         function showSection(sectionName) {
             console.log(`Switching to section: ${sectionName}`);
+            
+            // Close mobile sidebar when navigating
+            if (isMobile) {
+                closeMobileSidebar();
+            }
             
             // Hide all sections
             const sections = ['dashboard', 'workers', 'analytics', 'reports', 'settings'];
@@ -1034,6 +1245,15 @@
                 console.log('Loading analytics section...');
                 updateAnalytics();
             }
+            
+            // Refresh charts after section change (mobile fix)
+            setTimeout(() => {
+                if (window.Chart) {
+                    Chart.helpers.each(Chart.instances, function(instance) {
+                        instance.resize();
+                    });
+                }
+            }, 200);
         }
 
         // Apply enhanced NIC cell styling after DOM updates
@@ -1202,13 +1422,13 @@
                 const rowClass = index % 2 === 0 ? 'table-row-even' : 'table-row-odd';
                 const row = `
                     <tr class="table-row-hover ${rowClass} transition-all duration-200">
-                        <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">${record.nic}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${record.company || 'N/A'}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${record.date}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${record.in_time || 'N/A'}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${record.out_time || 'N/A'}</td>
-                        <td class="px-4 py-3 whitespace-nowrap">
-                            <span class="px-3 py-1 text-xs font-bold rounded-full ${getStatusColor(record)} shadow-sm">
+                        <td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-bold nic-cell table-cell-bold">${record.nic}</td>
+                        <td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm table-cell">${record.company || 'N/A'}</td>
+                        <td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm table-cell mobile-hide">${record.date}</td>
+                        <td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm table-cell">${record.in_time || 'N/A'}</td>
+                        <td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm table-cell mobile-hide">${record.out_time || 'N/A'}</td>
+                        <td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap">
+                            <span class="px-2 sm:px-3 py-1 text-xs font-bold rounded-full ${getStatusColor(record)} shadow-sm">
                                 ${record.status || 'PENDING'}
                             </span>
                         </td>
@@ -1649,24 +1869,26 @@
                 const row = `
                     <tr class="table-row-hover ${rowClass} transition-all duration-200" 
                         data-nic="${worker.nic}" data-company="${worker.company}" data-status="${worker.current_status}">
-                        <td class="px-4 py-3 whitespace-nowrap text-sm nic-cell">${worker.nic || 'N/A'}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm table-cell">${worker.company || 'N/A'}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm table-cell">${worker.position || 'N/A'}</td>
-                        <td class="px-4 py-3 whitespace-nowrap">
-                            <span class="px-3 py-1 text-xs font-bold rounded-full ${getWorkerStatusColor(worker.current_status)} shadow-sm">
+                        <td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm nic-cell table-cell-bold">${worker.nic || 'N/A'}</td>
+                        <td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm table-cell">${worker.company || 'N/A'}</td>
+                        <td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm table-cell mobile-hide">${worker.position || 'N/A'}</td>
+                        <td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap">
+                            <span class="px-2 sm:px-3 py-1 text-xs font-bold rounded-full ${getWorkerStatusColor(worker.current_status)} shadow-sm">
                                 ${worker.current_status || 'INACTIVE'}
                             </span>
                         </td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm table-cell">${worker.last_active || 'Never'}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm table-cell">${worker.total_sessions || 0}</td>
+                        <td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm table-cell mobile-hide">${worker.last_active || 'Never'}</td>
+                        <td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm table-cell mobile-hide">${worker.total_sessions || 0}</td>
                         </td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm">
-                            <button onclick="viewWorkerDetails('${worker.nic}')" class="text-blue-600 hover:text-blue-900 mr-2" title="View Details">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button onclick="exportWorkerData('${worker.nic}')" class="text-green-600 hover:text-green-900" title="Export Data">
-                                <i class="fas fa-download"></i>
-                            </button>
+                        <td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm">
+                            <div class="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2">
+                                <button onclick="viewWorkerDetails('${worker.nic}')" class="text-blue-600 hover:text-blue-900 font-medium" title="View Details">
+                                    <i class="fas fa-eye mr-1"></i><span class="hidden sm:inline">View</span>
+                                </button>
+                                <button onclick="exportWorkerData('${worker.nic}')" class="text-green-600 hover:text-green-900 font-medium" title="Export Data">
+                                    <i class="fas fa-download mr-1"></i><span class="hidden sm:inline">Export</span>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
